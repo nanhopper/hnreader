@@ -592,6 +592,7 @@
       if (domain) {
         const source = makeLink('', domain, articleUrl);
         source.setAttribute('aria-label', `Read article on ${domain}`);
+        source.dataset.readTarget = String(story.objectID);
         context.append(source);
         appendText(context, ' · ');
       }
@@ -672,7 +673,8 @@
         loadMore.addEventListener('click', () => {
           state.visibleCount += PAGE_SIZE;
           renderStories();
-          loadMore.focus();
+          const nextButton = elements.list.querySelector('.load-more');
+          if (nextButton) nextButton.focus();
         });
         elements.list.append(loadMore);
       }

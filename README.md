@@ -8,11 +8,12 @@ The default HN front page ranks stories by a points/time decay formula. This app
 
 ## Features
 
-- 🔎 Query top-commented HN stories over 24 h / 3 d / 7 d / 30 d windows
-- ⚙️ Adjustable minimum-comment threshold (default 100)
-- 🔗 Headline opens the **HN discussion** directly; a domain chip links to the original article
-- ✅ Read stories are tracked in `localStorage` and visually dimmed
-- 🌑 Dark-mode, mobile-first UI — zero external dependencies
+- 🔎 Find and rank HN stories over 24 h / 3 d / 7 d / 30 d windows
+- ⚙️ Filter by discussion size and sort by comments, points, or recency
+- 🔗 Open the original article from its headline or jump directly to the HN discussion
+- ✅ Track read stories locally, with controls to mark them read or unread
+- 🔖 Persist filters and reflect them in the URL for bookmarkable, shareable views
+- 🌓 Responsive light and dark themes — zero external dependencies
 
 ## Running Locally
 
