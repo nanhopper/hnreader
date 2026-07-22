@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HN Reader — Comments First</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --accent: #f0883e;
+      --accent-dim: #9e5a1a;
+      --text: #c9d1d9;
+      --text-muted: #8b949e;
+      --text-heading: #e6edf3;
+      --read-opacity: 0.4;
+      --radius: 8px;
+      --gap: 16px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px var(--gap);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header .logo {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+
+    header .tagline {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .controls {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px var(--gap);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .control-group label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    select, input[type="number"] {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 7px 10px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+      min-width: 120px;
+    }
+
+    select:focus, input[type="number"]:focus {
+      border-color: var(--accent);
+    }
+
+    input[type="number"] { width: 100px; }
+
+    button#fetch-btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: var(--radius);
+      padding: 8px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+      white-space: nowrap;
+      align-self: flex-end;
+    }
+
+    button#fetch-btn:hover { background: #ffab57; }
+    button#fetch-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .status-bar {
+      padding: 8px var(--gap);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: var(--gap);
+      display: grid;
+      gap: 10px;
+    }
+
+    .story-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      transition: border-color 0.15s, opacity 0.25s;
+    }
+
+    .story-card:hover { border-color: #444d56; }
+
+    .story-card.read { opacity: var(--read-opacity); }
+
+    .story-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .story-rank {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      min-width: 24px;
+      padding-top: 2px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .story-title-wrap { flex: 1; }
+
+    .story-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-heading);
+      text-decoration: none;
+      line-height: 1.4;
+      display: inline;
+    }
+
+    .story-title:hover { color: var(--accent); }
+
+    .domain-chip {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 1px 7px;
+      background: #21262d;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      white-space: nowrap;
+      vertical-align: middle;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .domain-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+    .story-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      margin-top: 8px;
+      padding-left: 34px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .badge .icon { font-style: normal; }
+
+    .badge.comments { color: #58a6ff; }
+    .badge.points { color: #3fb950; }
+
+    #empty-state {
+      text-align: center;
+      padding: 60px var(--gap);
+      color: var(--text-muted);
+    }
+
+    #empty-state .big-icon { font-size: 3rem; margin-bottom: 12px; }
+    #empty-state p { font-size: 0.9rem; }
+
+    footer {
+      text-align: center;
+      padding: 24px var(--gap);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    footer a { color: var(--accent-dim); text-decoration: none; }
+    footer a:hover { color: var(--accent); }
+
+    @media (max-width: 480px) {
+      .controls { gap: 8px; }
+      select, input[type="number"] { min-width: 90px; font-size: 0.85rem; }
+      button#fetch-btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">&#9650; HN Reader</div>
+    <div class="tagline">Comments-first Hacker News digest</div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="control-group">
+    <label for="timeframe">Timeframe</label>
+    <select id="timeframe">
+      <option value="86400">24 hours</option>
+      <option value="259200">3 days</option>
+      <option value="604800" selected>7 days</option>
+      <option value="2592000">30 days</option>
+    </select>
+  </div>
+
+  <div class="control-group">
+    <label for="min-comments">Min comments</label>
+    <input id="min-comments" type="number" value="100" min="0" step="10" />
+  </div>
+
+  <div class="control-group">
+    <label for="sort-by">Sort by</label>
+    <select id="sort-by">
+      <option value="comments">Most Commented</option>
+      <option value="points">Most Points</option>
+      <option value="recent">Most Recent</option>
+    </select>
+  </div>
+
+  <button id="fetch-btn">Fetch</button>
+</div>
+
+<div class="status-bar" id="status-bar"></div>
+
+<main id="story-list">
+  <div id="empty-state">
+    <div class="big-icon">&#128240;</div>
+    <p>Press <strong>Fetch</strong> to load top-commented stories.</p>
+  </div>
+</main>
+
+<footer>
+  Data from <a href="https://hn.algolia.com/api" target="_blank" rel="noopener">HN Algolia API</a> &middot;
+  Stories from <a href="https://news.ycombinator.com" target="_blank" rel="noopener">Hacker News</a>
+</footer>
+
+<script>
+  const READ_KEY = 'hn_read_stories';
+
+  function getReadSet() {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(READ_KEY) || '[]'));
+    } catch { return new Set(); }
+  }
+
+  function markRead(id) {
+    const set = getReadSet();
+    set.add(String(id));
+    localStorage.setItem(READ_KEY, JSON.stringify([...set]));
+  }
+
+  function relativeTime(unixTs) {
+    const diff = Math.floor(Date.now() / 1000) - unixTs;
+    if (diff < 3600)   return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400)  return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    return `${Math.floor(diff / 604800)}w ago`;
+  }
+
+  function extractDomain(url) {
+    if (!url) return null;
+    try {
+      return new URL(url).hostname.replace(/^www\./, '');
+    } catch { return null; }
+  }
+
+  function setStatus(msg, loading = false) {
+    const bar = document.getElementById('status-bar');
+    if (loading) {
+      bar.innerHTML = `<span class="spinner"></span>${msg}`;
+    } else {
+      bar.textContent = msg;
+    }
+  }
+
+  function renderStories(hits) {
+    const list = document.getElementById('story-list');
+    const readSet = getReadSet();
+
+    if (!hits.length) {
+      list.innerHTML = `<div id="empty-state"><div class="big-icon">&#128220;</div><p>No stories matched your filters. Try adjusting the timeframe or minimum comments.</p></div>`;
+      return;
+    }
+
+    list.innerHTML = hits.map((h, i) => {
+      const hnUrl   = `https://news.ycombinator.com/item?id=${h.objectID}`;
+      const domain  = extractDomain(h.url);
+      const isRead  = readSet.has(String(h.objectID));
+      const domainChip = domain
+        ? `<a class="domain-chip" href="${h.url}" target="_blank" rel="noopener">${domain} &#8599;</a>`
+        : '';
+
+      return `
+        <div class="story-card${isRead ? ' read' : ''}" data-id="${h.objectID}">
+          <div class="story-top">
+            <span class="story-rank">${i + 1}</span>
+            <div class="story-title-wrap">
+              <a class="story-title hn-link"
+                 href="${hnUrl}"
+                 target="_blank"
+                 rel="noopener"
+                 data-id="${h.objectID}">${h.title || '(untitled)'}</a>
+              ${domainChip}
+            </div>
+          </div>
+          <div class="story-meta">
+            <span class="badge comments"><i class="icon">&#128172;</i>${(h.num_comments || 0).toLocaleString()} comments</span>
+            <span class="badge points"><i class="icon">&#9650;</i>${(h.points || 0).toLocaleString()} pts</span>
+            <span class="badge"><i class="icon">&#128100;</i>${h.author || '?'}</span>
+            <span class="badge"><i class="icon">&#128336;</i>${relativeTime(h.created_at_i)}</span>
+          </div>
+        </div>`.trim();
+    }).join('\n');
+
+    list.querySelectorAll('a.hn-link').forEach(a => {
+      a.addEventListener('click', () => {
+        const id = a.dataset.id;
+        markRead(id);
+        a.closest('.story-card').classList.add('read');
+      });
+    });
+  }
+
+  async function fetchStories() {
+    const btn         = document.getElementById('fetch-btn');
+    const timeframeSec = parseInt(document.getElementById('timeframe').value, 10);
+    const minComments  = parseInt(document.getElementById('min-comments').value, 10) || 0;
+    const sortBy       = document.getElementById('sort-by').value;
+
+    const timestamp = Math.floor(Date.now() / 1000) - timeframeSec;
+    const url = `https://hn.algolia.com/api/v1/search?tags=story`
+      + `&numericFilters=created_at_i>${timestamp},num_comments>${minComments}`
+      + `&hitsPerPage=100`;
+
+    btn.disabled = true;
+    setStatus('Fetching stories…', true);
+
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      let hits = data.hits || [];
+
+      if (sortBy === 'comments') {
+        hits.sort((a, b) => (b.num_comments || 0) - (a.num_comments || 0));
+      } else if (sortBy === 'points') {
+        hits.sort((a, b) => (b.points || 0) - (a.points || 0));
+      } else {
+        hits.sort((a, b) => (b.created_at_i || 0) - (a.created_at_i || 0));
+      }
+
+      setStatus(`${hits.length} stor${hits.length === 1 ? 'y' : 'ies'} loaded`);
+      renderStories(hits);
+    } catch (err) {
+      setStatus(`Error: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('fetch-btn').addEventListener('click', fetchStories);
+
+  // Auto-fetch on load
+  fetchStories();
+</script>
+</body>
+</html>
