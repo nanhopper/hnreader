@@ -218,6 +218,50 @@
     .badge.comments { color: #58a6ff; }
     .badge.points { color: #3fb950; }
 
+    .action-bar {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .btn-comments, .btn-article {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      text-align: center;
+      cursor: pointer;
+      transition: opacity 0.15s, background 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .btn-comments {
+      flex: 0 0 72%;
+      background: #ff660022;
+      border: 1.5px solid #ff6600;
+      color: #ff9944;
+    }
+
+    .btn-comments:hover { background: #ff660044; }
+
+    .btn-article {
+      flex: 1;
+      background: #2b2e38;
+      border: 1.5px solid transparent;
+      color: #8b92a2;
+    }
+
+    .btn-article:hover { color: var(--text); }
+
+    .btn-article[hidden] { display: none; }
+
     #empty-state {
       text-align: center;
       padding: 60px var(--gap);
@@ -344,36 +388,42 @@
     }
 
     list.innerHTML = hits.map((h, i) => {
-      const hnUrl   = `https://news.ycombinator.com/item?id=${h.objectID}`;
-      const domain  = extractDomain(h.url);
-      const isRead  = readSet.has(String(h.objectID));
-      const domainChip = domain
-        ? `<a class="domain-chip" href="${h.url}" target="_blank" rel="noopener">${domain} &#8599;</a>`
-        : '';
+      const hnUrl  = `https://news.ycombinator.com/item?id=${h.objectID}`;
+      const domain = extractDomain(h.url);
+      const isRead = readSet.has(String(h.objectID));
 
       return `
         <div class="story-card${isRead ? ' read' : ''}" data-id="${h.objectID}">
           <div class="story-top">
             <span class="story-rank">${i + 1}</span>
             <div class="story-title-wrap">
-              <a class="story-title hn-link"
+              <a class="story-title"
                  href="${hnUrl}"
                  target="_blank"
-                 rel="noopener"
-                 data-id="${h.objectID}">${h.title || '(untitled)'}</a>
-              ${domainChip}
+                 rel="noopener">${h.title || '(untitled)'}</a>
             </div>
           </div>
           <div class="story-meta">
-            <span class="badge comments"><i class="icon">&#128172;</i>${(h.num_comments || 0).toLocaleString()} comments</span>
             <span class="badge points"><i class="icon">&#9650;</i>${(h.points || 0).toLocaleString()} pts</span>
             <span class="badge"><i class="icon">&#128100;</i>${h.author || '?'}</span>
             <span class="badge"><i class="icon">&#128336;</i>${relativeTime(h.created_at_i)}</span>
           </div>
+          <div class="action-bar">
+            <a class="btn-comments"
+               href="${hnUrl}"
+               target="_blank"
+               rel="noopener"
+               data-id="${h.objectID}">&#128172; ${(h.num_comments || 0).toLocaleString()} Comments</a>
+            <a class="btn-article"
+               href="${h.url || '#'}"
+               target="_blank"
+               rel="noopener"
+               ${!domain ? 'hidden' : ''}>${domain ? domain + ' &#8599;' : ''}</a>
+          </div>
         </div>`.trim();
     }).join('\n');
 
-    list.querySelectorAll('a.hn-link').forEach(a => {
+    list.querySelectorAll('a.btn-comments').forEach(a => {
       a.addEventListener('click', () => {
         const id = a.dataset.id;
         markRead(id);
