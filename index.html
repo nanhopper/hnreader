@@ -3,117 +3,181 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark light" />
   <title>HN Reader — Comments First</title>
   <style>
     :root {
+      color-scheme: dark;
       --bg: #0d1117;
       --surface: #161b22;
+      --surface-raised: #1c2129;
       --border: #30363d;
-      --accent: #f0883e;
-      --accent-dim: #9e5a1a;
+      --border-strong: #484f58;
+      --accent: #ff7a1a;
+      --accent-hover: #ff984d;
+      --accent-soft: rgba(255, 122, 26, 0.12);
       --text: #c9d1d9;
       --text-muted: #8b949e;
-      --text-heading: #e6edf3;
-      --read-opacity: 0.4;
-      --radius: 8px;
-      --gap: 16px;
+      --heading: #f0f3f6;
+      --focus: #58a6ff;
+      --radius: 10px;
+      --content-width: 780px;
     }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg: #f6f8fa;
+      --surface: #ffffff;
+      --surface-raised: #f6f8fa;
+      --border: #d0d7de;
+      --border-strong: #8c959f;
+      --accent: #c54b00;
+      --accent-hover: #9d3c00;
+      --accent-soft: rgba(197, 75, 0, 0.09);
+      --text: #24292f;
+      --text-muted: #57606a;
+      --heading: #1f2328;
+      --focus: #0969da;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html { scrollbar-gutter: stable; }
 
     body {
+      margin: 0;
+      min-height: 100vh;
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
       font-size: 15px;
-      line-height: 1.6;
-      min-height: 100vh;
+      line-height: 1.5;
     }
 
-    header {
-      background: var(--surface);
+    button, select, input { font: inherit; }
+
+    a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .site-header {
       border-bottom: 1px solid var(--border);
-      padding: 14px var(--gap);
+      background: var(--surface);
+    }
+
+    .header-inner, .filter-inner, .status-bar, main {
+      width: min(calc(100% - 32px), var(--content-width));
+      margin-inline: auto;
+    }
+
+    .header-inner {
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: space-between;
+      gap: 16px;
+      padding-block: 22px;
     }
 
-    header .logo {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: var(--accent);
-      letter-spacing: -0.5px;
+    h1 {
+      margin: 0;
+      color: var(--heading);
+      font-size: clamp(1.35rem, 4vw, 1.65rem);
+      line-height: 1.15;
+      letter-spacing: -0.03em;
     }
 
-    header .tagline {
-      font-size: 0.8rem;
+    .brand-mark { color: var(--accent); }
+
+    .tagline {
+      margin: 4px 0 0;
       color: var(--text-muted);
+      font-size: 0.85rem;
     }
 
-    .controls {
-      background: var(--surface);
+    .theme-toggle {
+      min-width: 42px;
+      min-height: 42px;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface-raised);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .theme-toggle:hover { border-color: var(--border-strong); }
+
+    .filter-shell {
+      position: sticky;
+      z-index: 10;
+      top: 0;
       border-bottom: 1px solid var(--border);
-      padding: 12px var(--gap);
-      display: flex;
-      flex-wrap: wrap;
+      background: color-mix(in srgb, var(--surface) 94%, transparent);
+      backdrop-filter: blur(10px);
+    }
+
+    .filter-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.15fr auto;
+      align-items: end;
       gap: 10px;
-      align-items: flex-end;
+      padding-block: 12px;
     }
 
     .control-group {
       display: flex;
+      min-width: 0;
       flex-direction: column;
       gap: 4px;
     }
 
     .control-group label {
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
       color: var(--text-muted);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
 
     select, input[type="number"] {
+      width: 100%;
+      min-height: 40px;
+      padding: 7px 9px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
       background: var(--bg);
       color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 7px 10px;
-      font-size: 0.9rem;
-      outline: none;
-      transition: border-color 0.15s;
-      min-width: 120px;
     }
 
-    select:focus, input[type="number"]:focus {
-      border-color: var(--accent);
-    }
+    select:hover, input[type="number"]:hover { border-color: var(--border-strong); }
 
-    input[type="number"] { width: 100px; }
-
-    button#fetch-btn {
+    .apply-button, .load-more, .retry-button {
+      min-height: 40px;
+      padding: 8px 16px;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
       background: var(--accent);
-      color: #000;
-      border: none;
-      border-radius: var(--radius);
-      padding: 8px 20px;
-      font-size: 0.9rem;
-      font-weight: 600;
+      color: #111;
+      font-weight: 700;
       cursor: pointer;
-      transition: background 0.15s, opacity 0.15s;
-      white-space: nowrap;
-      align-self: flex-end;
     }
 
-    button#fetch-btn:hover { background: #ffab57; }
-    button#fetch-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .apply-button:hover, .load-more:hover, .retry-button:hover {
+      border-color: var(--accent-hover);
+      background: var(--accent-hover);
+    }
+
+    .apply-button:disabled { cursor: wait; opacity: 0.65; }
 
     .status-bar {
-      padding: 8px var(--gap);
-      font-size: 0.8rem;
+      min-height: 42px;
+      padding-block: 10px 2px;
       color: var(--text-muted);
-      min-height: 32px;
+      font-size: 0.82rem;
+    }
+
+    .status-content {
       display: flex;
       align-items: center;
       gap: 8px;
@@ -122,357 +186,638 @@
     .spinner {
       width: 14px;
       height: 14px;
+      flex: 0 0 auto;
       border: 2px solid var(--border);
       border-top-color: var(--accent);
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
-      flex-shrink: 0;
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
     main {
-      max-width: 860px;
-      margin: 0 auto;
-      padding: var(--gap);
       display: grid;
-      gap: 10px;
+      gap: 12px;
+      padding-block: 12px 28px;
     }
 
     .story-card {
-      background: var(--surface);
+      padding: 17px 18px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 14px 16px;
-      transition: border-color 0.15s, opacity 0.25s;
+      background: var(--surface);
+      transition: border-color 0.15s, transform 0.15s;
     }
 
-    .story-card:hover { border-color: #444d56; }
+    .story-card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
 
-    .story-card.read { opacity: var(--read-opacity); }
+    .story-card.read .story-title,
+    .story-card.read .story-context,
+    .story-card.read .story-points { opacity: 0.55; }
 
-    .story-top {
+    .story-context {
       display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      margin-bottom: 8px;
-    }
-
-    .story-rank {
-      font-size: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 7px;
       color: var(--text-muted);
-      min-width: 24px;
-      padding-top: 2px;
-      text-align: right;
-      flex-shrink: 0;
+      font-size: 0.75rem;
     }
 
-    .story-title-wrap { flex: 1; }
+    .story-context a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .story-context a:hover { color: var(--accent); text-decoration: underline; }
+
+    .read-label {
+      display: none;
+      padding: 0 5px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+    }
+
+    .story-card.read .read-label { display: inline-block; }
+
+    .story-title-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      gap: 16px;
+    }
 
     .story-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--text-heading);
+      color: var(--heading);
+      font-size: 1.05rem;
+      font-weight: 650;
+      line-height: 1.38;
       text-decoration: none;
-      line-height: 1.4;
-      display: inline;
     }
 
     .story-title:hover { color: var(--accent); }
 
-    .domain-chip {
-      display: inline-block;
-      margin-left: 8px;
-      padding: 1px 7px;
-      background: #21262d;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      text-decoration: none;
+    .comment-count {
+      color: var(--accent);
+      font-size: 0.86rem;
+      font-weight: 700;
+      line-height: 1.4;
       white-space: nowrap;
-      vertical-align: middle;
-      transition: border-color 0.15s, color 0.15s;
     }
 
-    .domain-chip:hover { border-color: var(--accent); color: var(--accent); }
-
-    .story-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px 12px;
-      margin-top: 8px;
-      padding-left: 34px;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 0.75rem;
+    .story-points {
+      margin-top: 7px;
       color: var(--text-muted);
+      font-size: 0.77rem;
     }
-
-    .badge .icon { font-style: normal; }
-
-    .badge.comments { color: #58a6ff; }
-    .badge.points { color: #3fb950; }
 
     .action-bar {
       display: flex;
-      gap: 10px;
-      margin-top: 12px;
+      align-items: center;
+      gap: 8px;
+      margin-top: 13px;
     }
 
-    .btn-comments, .btn-article {
-      display: flex;
+    .story-action {
+      display: inline-flex;
+      min-height: 38px;
       align-items: center;
       justify-content: center;
-      min-height: 44px;
-      padding: 10px 14px;
+      padding: 7px 12px;
       border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 600;
+      font-size: 0.82rem;
+      font-weight: 650;
       text-decoration: none;
-      text-align: center;
+    }
+
+    .discuss-action {
+      border: 1px solid var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .discuss-action:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+
+    .article-action {
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .article-action:hover { border-color: var(--border-strong); }
+
+    .read-toggle {
+      min-height: 38px;
+      margin-left: auto;
+      padding: 6px 2px;
+      border: 0;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.75rem;
       cursor: pointer;
-      transition: opacity 0.15s, background 0.15s;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
-    .btn-comments {
-      flex: 0 0 72%;
-      background: #ff660022;
-      border: 1.5px solid #ff6600;
-      color: #ff9944;
-    }
+    .read-toggle:hover { color: var(--text); text-decoration: underline; }
 
-    .btn-comments:hover { background: #ff660044; }
-
-    .btn-article {
-      flex: 1;
-      background: #2b2e38;
-      border: 1.5px solid transparent;
-      color: #8b92a2;
-    }
-
-    .btn-article:hover { color: var(--text); }
-
-    .btn-article[hidden] { display: none; }
-
-    #empty-state {
+    .empty-state, .error-state {
+      padding: 64px 20px;
       text-align: center;
-      padding: 60px var(--gap);
       color: var(--text-muted);
     }
 
-    #empty-state .big-icon { font-size: 3rem; margin-bottom: 12px; }
-    #empty-state p { font-size: 0.9rem; }
+    .empty-state h2, .error-state h2 {
+      margin: 0 0 6px;
+      color: var(--heading);
+      font-size: 1.05rem;
+    }
+
+    .empty-state p, .error-state p { margin: 0 0 16px; }
+
+    .skeleton {
+      min-height: 154px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .skeleton::after {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(139, 148, 158, 0.08), transparent);
+      content: "";
+      animation: shimmer 1.4s infinite;
+      transform: translateX(-100%);
+    }
+
+    .skeleton-line {
+      height: 11px;
+      margin-bottom: 12px;
+      border-radius: 20px;
+      background: var(--surface-raised);
+    }
+
+    .skeleton-line.title { width: 80%; height: 18px; }
+    .skeleton-line.short { width: 38%; }
+
+    @keyframes shimmer { to { transform: translateX(100%); } }
+
+    .load-more {
+      width: 100%;
+      margin-top: 4px;
+      background: transparent;
+      color: var(--accent);
+    }
 
     footer {
-      text-align: center;
-      padding: 24px var(--gap);
-      font-size: 0.75rem;
+      padding: 0 16px 28px;
       color: var(--text-muted);
+      font-size: 0.75rem;
+      text-align: center;
     }
 
-    footer a { color: var(--accent-dim); text-decoration: none; }
+    footer a { color: var(--text-muted); }
     footer a:hover { color: var(--accent); }
 
-    @media (max-width: 480px) {
-      .controls { gap: 8px; }
-      select, input[type="number"] { min-width: 90px; font-size: 0.85rem; }
-      button#fetch-btn { width: 100%; }
+    @media (max-width: 680px) {
+      .header-inner, .filter-inner, .status-bar, main {
+        width: min(calc(100% - 24px), var(--content-width));
+      }
+
+      .filter-inner { grid-template-columns: 1fr 1fr; }
+      .apply-button { width: 100%; }
+      .story-title-row { display: block; }
+      .comment-count { display: inline-block; margin-top: 8px; }
+    }
+
+    @media (max-width: 440px) {
+      .filter-inner { grid-template-columns: 1fr; }
+      .story-card { padding: 15px; }
+      .action-bar { flex-wrap: wrap; }
+      .story-action { flex: 1; }
+      .read-toggle { width: 100%; margin-left: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+      }
     }
   </style>
 </head>
 <body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div>
+        <h1><span class="brand-mark" aria-hidden="true">▲</span> HN Reader</h1>
+        <p class="tagline">The conversations worth catching</p>
+      </div>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Use light theme" title="Change theme">☀</button>
+    </div>
+  </header>
 
-<header>
-  <div>
-    <div class="logo">&#9650; HN Reader</div>
-    <div class="tagline">Comments-first Hacker News digest</div>
+  <div class="filter-shell">
+    <form class="filter-inner" id="filter-form">
+      <div class="control-group">
+        <label for="timeframe">Timeframe</label>
+        <select id="timeframe" name="timeframe">
+          <option value="86400">24 hours</option>
+          <option value="259200">3 days</option>
+          <option value="604800">7 days</option>
+          <option value="2592000">30 days</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="min-comments">Minimum comments</label>
+        <input id="min-comments" name="minComments" type="number" value="100" min="0" max="10000" step="10" required />
+      </div>
+      <div class="control-group">
+        <label for="sort-by">Sort by</label>
+        <select id="sort-by" name="sort">
+          <option value="comments">Most commented</option>
+          <option value="points">Most points</option>
+          <option value="recent">Most recent</option>
+        </select>
+      </div>
+      <button class="apply-button" id="apply-button" type="submit">Apply</button>
+    </form>
   </div>
-</header>
 
-<div class="controls">
-  <div class="control-group">
-    <label for="timeframe">Timeframe</label>
-    <select id="timeframe">
-      <option value="86400">24 hours</option>
-      <option value="259200">3 days</option>
-      <option value="604800" selected>7 days</option>
-      <option value="2592000">30 days</option>
-    </select>
-  </div>
+  <div class="status-bar" id="status-bar" role="status" aria-live="polite"></div>
+  <main id="story-list" aria-busy="true"></main>
 
-  <div class="control-group">
-    <label for="min-comments">Min comments</label>
-    <input id="min-comments" type="number" value="100" min="0" step="10" />
-  </div>
+  <footer>
+    Data from <a href="https://hn.algolia.com/api" target="_blank" rel="noopener noreferrer">HN Algolia API</a>
+    · Stories from <a href="https://news.ycombinator.com" target="_blank" rel="noopener noreferrer">Hacker News</a>
+  </footer>
 
-  <div class="control-group">
-    <label for="sort-by">Sort by</label>
-    <select id="sort-by">
-      <option value="comments">Most Commented</option>
-      <option value="points">Most Points</option>
-      <option value="recent">Most Recent</option>
-    </select>
-  </div>
+  <script>
+    const READ_KEY = 'hn_read_stories';
+    const FILTER_KEY = 'hn_reader_filters';
+    const THEME_KEY = 'hn_reader_theme';
+    const PAGE_SIZE = 25;
+    const MAX_API_PAGES = 10;
 
-  <button id="fetch-btn">Fetch</button>
-</div>
+    const state = {
+      stories: [],
+      visibleCount: PAGE_SIZE,
+      isLoading: false,
+      isTruncated: false
+    };
 
-<div class="status-bar" id="status-bar"></div>
+    const elements = {
+      form: document.getElementById('filter-form'),
+      timeframe: document.getElementById('timeframe'),
+      minComments: document.getElementById('min-comments'),
+      sort: document.getElementById('sort-by'),
+      apply: document.getElementById('apply-button'),
+      status: document.getElementById('status-bar'),
+      list: document.getElementById('story-list'),
+      theme: document.getElementById('theme-toggle')
+    };
 
-<main id="story-list">
-  <div id="empty-state">
-    <div class="big-icon">&#128240;</div>
-    <p>Press <strong>Fetch</strong> to load top-commented stories.</p>
-  </div>
-</main>
-
-<footer>
-  Data from <a href="https://hn.algolia.com/api" target="_blank" rel="noopener">HN Algolia API</a> &middot;
-  Stories from <a href="https://news.ycombinator.com" target="_blank" rel="noopener">Hacker News</a>
-</footer>
-
-<script>
-  const READ_KEY = 'hn_read_stories';
-
-  function getReadSet() {
-    try {
-      return new Set(JSON.parse(localStorage.getItem(READ_KEY) || '[]'));
-    } catch { return new Set(); }
-  }
-
-  function markRead(id) {
-    const set = getReadSet();
-    set.add(String(id));
-    localStorage.setItem(READ_KEY, JSON.stringify([...set]));
-  }
-
-  function relativeTime(unixTs) {
-    const diff = Math.floor(Date.now() / 1000) - unixTs;
-    if (diff < 3600)   return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400)  return `${Math.floor(diff / 3600)}h ago`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-    return `${Math.floor(diff / 604800)}w ago`;
-  }
-
-  function extractDomain(url) {
-    if (!url) return null;
-    try {
-      return new URL(url).hostname.replace(/^www\./, '');
-    } catch { return null; }
-  }
-
-  function setStatus(msg, loading = false) {
-    const bar = document.getElementById('status-bar');
-    if (loading) {
-      bar.innerHTML = `<span class="spinner"></span>${msg}`;
-    } else {
-      bar.textContent = msg;
-    }
-  }
-
-  function renderStories(hits) {
-    const list = document.getElementById('story-list');
-    const readSet = getReadSet();
-
-    if (!hits.length) {
-      list.innerHTML = `<div id="empty-state"><div class="big-icon">&#128220;</div><p>No stories matched your filters. Try adjusting the timeframe or minimum comments.</p></div>`;
-      return;
+    function getReadSet() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
+        return new Set(Array.isArray(stored) ? stored.map(String) : []);
+      } catch {
+        return new Set();
+      }
     }
 
-    list.innerHTML = hits.map((h, i) => {
-      const hnUrl  = `https://news.ycombinator.com/item?id=${h.objectID}`;
-      const domain = extractDomain(h.url);
-      const isRead = readSet.has(String(h.objectID));
+    function setRead(id, isRead) {
+      const readSet = getReadSet();
+      if (isRead) readSet.add(String(id));
+      else readSet.delete(String(id));
+      localStorage.setItem(READ_KEY, JSON.stringify([...readSet]));
 
-      return `
-        <div class="story-card${isRead ? ' read' : ''}" data-id="${h.objectID}">
-          <div class="story-top">
-            <span class="story-rank">${i + 1}</span>
-            <div class="story-title-wrap">
-              <a class="story-title"
-                 href="${hnUrl}"
-                 target="_blank"
-                 rel="noopener">${h.title || '(untitled)'}</a>
-            </div>
-          </div>
-          <div class="story-meta">
-            <span class="badge points"><i class="icon">&#9650;</i>${(h.points || 0).toLocaleString()} pts</span>
-            <span class="badge"><i class="icon">&#128100;</i>${h.author || '?'}</span>
-            <span class="badge"><i class="icon">&#128336;</i>${relativeTime(h.created_at_i)}</span>
-          </div>
-          <div class="action-bar">
-            <a class="btn-comments"
-               href="${hnUrl}"
-               target="_blank"
-               rel="noopener"
-               data-id="${h.objectID}">&#128172; ${(h.num_comments || 0).toLocaleString()} Comments</a>
-            <a class="btn-article"
-               href="${h.url || '#'}"
-               target="_blank"
-               rel="noopener"
-               ${!domain ? 'hidden' : ''}>${domain ? domain + ' &#8599;' : ''}</a>
-          </div>
-        </div>`.trim();
-    }).join('\n');
+      const card = elements.list.querySelector(`[data-story-id="${CSS.escape(String(id))}"]`);
+      if (!card) return;
+      card.classList.toggle('read', isRead);
+      const toggle = card.querySelector('.read-toggle');
+      toggle.textContent = isRead ? 'Mark unread' : 'Mark read';
+      toggle.setAttribute('aria-pressed', String(isRead));
+    }
 
-    list.querySelectorAll('a.btn-comments').forEach(a => {
-      a.addEventListener('click', () => {
-        const id = a.dataset.id;
-        markRead(id);
-        a.closest('.story-card').classList.add('read');
-      });
-    });
-  }
+    function relativeTime(unixTimestamp) {
+      const diff = Math.max(0, Math.floor(Date.now() / 1000) - Number(unixTimestamp || 0));
+      if (diff < 60) return 'just now';
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+      return `${Math.floor(diff / 604800)}w ago`;
+    }
 
-  async function fetchStories() {
-    const btn         = document.getElementById('fetch-btn');
-    const timeframeSec = parseInt(document.getElementById('timeframe').value, 10);
-    const minComments  = parseInt(document.getElementById('min-comments').value, 10) || 0;
-    const sortBy       = document.getElementById('sort-by').value;
+    function safeArticleUrl(url) {
+      if (!url) return null;
+      try {
+        const parsed = new URL(url);
+        return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : null;
+      } catch {
+        return null;
+      }
+    }
 
-    const timestamp = Math.floor(Date.now() / 1000) - timeframeSec;
-    const url = `https://hn.algolia.com/api/v1/search?tags=story`
-      + `&numericFilters=created_at_i>${timestamp},num_comments>${minComments}`
-      + `&hitsPerPage=100`;
+    function extractDomain(url) {
+      if (!url) return null;
+      try {
+        return new URL(url).hostname.replace(/^www\./, '');
+      } catch {
+        return null;
+      }
+    }
 
-    btn.disabled = true;
-    setStatus('Fetching stories…', true);
+    function appendText(parent, text) {
+      parent.append(document.createTextNode(text));
+    }
 
-    try {
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      let hits = data.hits || [];
+    function setStatus(message, loading = false) {
+      elements.status.replaceChildren();
+      const content = document.createElement('div');
+      content.className = 'status-content';
+      if (loading) {
+        const spinner = document.createElement('span');
+        spinner.className = 'spinner';
+        spinner.setAttribute('aria-hidden', 'true');
+        content.append(spinner);
+      }
+      appendText(content, message);
+      elements.status.append(content);
+    }
 
-      if (sortBy === 'comments') {
-        hits.sort((a, b) => (b.num_comments || 0) - (a.num_comments || 0));
-      } else if (sortBy === 'points') {
-        hits.sort((a, b) => (b.points || 0) - (a.points || 0));
-      } else {
-        hits.sort((a, b) => (b.created_at_i || 0) - (a.created_at_i || 0));
+    function renderSkeletons() {
+      elements.list.replaceChildren();
+      for (let index = 0; index < 4; index += 1) {
+        const skeleton = document.createElement('div');
+        skeleton.className = 'story-card skeleton';
+        skeleton.setAttribute('aria-hidden', 'true');
+        ['short', 'title', '', 'short'].forEach(kind => {
+          const line = document.createElement('div');
+          line.className = `skeleton-line ${kind}`.trim();
+          skeleton.append(line);
+        });
+        elements.list.append(skeleton);
+      }
+    }
+
+    function makeLink(className, label, href) {
+      const link = document.createElement('a');
+      link.className = className;
+      link.textContent = label;
+      link.href = href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      return link;
+    }
+
+    function createStoryCard(story) {
+      const hnUrl = `https://news.ycombinator.com/item?id=${encodeURIComponent(story.objectID)}`;
+      const articleUrl = safeArticleUrl(story.url);
+      const titleUrl = articleUrl || hnUrl;
+      const domain = extractDomain(articleUrl);
+      const isRead = getReadSet().has(String(story.objectID));
+
+      const article = document.createElement('article');
+      article.className = `story-card${isRead ? ' read' : ''}`;
+      article.dataset.storyId = String(story.objectID);
+
+      const context = document.createElement('div');
+      context.className = 'story-context';
+      if (domain) {
+        const source = makeLink('', domain, articleUrl);
+        source.setAttribute('aria-label', `Read article on ${domain}`);
+        context.append(source);
+        appendText(context, ' · ');
+      }
+      appendText(context, `${relativeTime(story.created_at_i)} · by ${story.author || 'unknown'} · #${story.rank}`);
+      const readLabel = document.createElement('span');
+      readLabel.className = 'read-label';
+      readLabel.textContent = 'Read';
+      context.append(' ', readLabel);
+
+      const titleRow = document.createElement('div');
+      titleRow.className = 'story-title-row';
+      const heading = document.createElement('h2');
+      heading.style.margin = '0';
+      heading.style.fontSize = 'inherit';
+      const title = makeLink('story-title', story.title || '(untitled)', titleUrl);
+      title.dataset.readTarget = String(story.objectID);
+      heading.append(title);
+
+      const comments = makeLink('comment-count', `${Number(story.num_comments || 0).toLocaleString()} comments`, hnUrl);
+      comments.dataset.readTarget = String(story.objectID);
+      titleRow.append(heading, comments);
+
+      const points = document.createElement('div');
+      points.className = 'story-points';
+      points.textContent = `${Number(story.points || 0).toLocaleString()} points`;
+
+      const actions = document.createElement('div');
+      actions.className = 'action-bar';
+      const discuss = makeLink('story-action discuss-action', 'Discuss on HN', hnUrl);
+      discuss.dataset.readTarget = String(story.objectID);
+      actions.append(discuss);
+
+      if (articleUrl) {
+        const readArticle = makeLink('story-action article-action', 'Read article ↗', articleUrl);
+        readArticle.dataset.readTarget = String(story.objectID);
+        actions.append(readArticle);
       }
 
-      setStatus(`${hits.length} stor${hits.length === 1 ? 'y' : 'ies'} loaded`);
-      renderStories(hits);
-    } catch (err) {
-      setStatus(`Error: ${err.message}`);
-    } finally {
-      btn.disabled = false;
+      const readToggle = document.createElement('button');
+      readToggle.className = 'read-toggle';
+      readToggle.type = 'button';
+      readToggle.textContent = isRead ? 'Mark unread' : 'Mark read';
+      readToggle.setAttribute('aria-pressed', String(isRead));
+      readToggle.addEventListener('click', () => {
+        setRead(story.objectID, !article.classList.contains('read'));
+      });
+      actions.append(readToggle);
+
+      article.append(context, titleRow, points, actions);
+      return article;
     }
-  }
 
-  document.getElementById('fetch-btn').addEventListener('click', fetchStories);
+    function renderStories() {
+      elements.list.replaceChildren();
+      const visibleStories = state.stories.slice(0, state.visibleCount);
 
-  // Auto-fetch on load
-  fetchStories();
-</script>
+      if (!visibleStories.length) {
+        const empty = document.createElement('section');
+        empty.className = 'empty-state';
+        const heading = document.createElement('h2');
+        heading.textContent = 'No conversations found';
+        const detail = document.createElement('p');
+        detail.textContent = 'Try a longer timeframe or a lower comment minimum.';
+        empty.append(heading, detail);
+        elements.list.append(empty);
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      visibleStories.forEach(story => fragment.append(createStoryCard(story)));
+      elements.list.append(fragment);
+
+      if (state.visibleCount < state.stories.length) {
+        const loadMore = document.createElement('button');
+        loadMore.className = 'load-more';
+        loadMore.type = 'button';
+        loadMore.textContent = `Show more (${state.stories.length - state.visibleCount} remaining)`;
+        loadMore.addEventListener('click', () => {
+          state.visibleCount += PAGE_SIZE;
+          renderStories();
+          loadMore.focus();
+        });
+        elements.list.append(loadMore);
+      }
+    }
+
+    function getFilters() {
+      return {
+        timeframe: Number(elements.timeframe.value),
+        minComments: Math.max(0, Number(elements.minComments.value)),
+        sort: elements.sort.value
+      };
+    }
+
+    function applySavedFilters() {
+      let saved = {};
+      try {
+        saved = JSON.parse(localStorage.getItem(FILTER_KEY) || '{}');
+      } catch {
+        saved = {};
+      }
+      const params = new URLSearchParams(location.search);
+      const values = {
+        timeframe: params.get('timeframe') || saved.timeframe || '604800',
+        minComments: params.get('minComments') ?? saved.minComments ?? '100',
+        sort: params.get('sort') || saved.sort || 'comments'
+      };
+      if ([...elements.timeframe.options].some(option => option.value === String(values.timeframe))) {
+        elements.timeframe.value = String(values.timeframe);
+      }
+      if ([...elements.sort.options].some(option => option.value === values.sort)) {
+        elements.sort.value = values.sort;
+      }
+      const minimum = Number(values.minComments);
+      elements.minComments.value = Number.isFinite(minimum) ? Math.min(10000, Math.max(0, minimum)) : 100;
+    }
+
+    function saveFilters(filters) {
+      localStorage.setItem(FILTER_KEY, JSON.stringify(filters));
+      const params = new URLSearchParams();
+      params.set('timeframe', filters.timeframe);
+      params.set('minComments', filters.minComments);
+      params.set('sort', filters.sort);
+      history.replaceState(null, '', `${location.pathname}?${params}`);
+    }
+
+    function sortStories(stories, sortBy) {
+      const comparisons = {
+        comments: (a, b) => Number(b.num_comments || 0) - Number(a.num_comments || 0),
+        points: (a, b) => Number(b.points || 0) - Number(a.points || 0),
+        recent: (a, b) => Number(b.created_at_i || 0) - Number(a.created_at_i || 0)
+      };
+      return stories.sort(comparisons[sortBy] || comparisons.comments);
+    }
+
+    async function fetchApiPage(baseUrl, page) {
+      const response = await fetch(`${baseUrl}&page=${page}`);
+      if (!response.ok) throw new Error(`The news service returned HTTP ${response.status}.`);
+      return response.json();
+    }
+
+    async function fetchStories() {
+      if (state.isLoading || !elements.form.reportValidity()) return;
+      const filters = getFilters();
+      saveFilters(filters);
+
+      const timestamp = Math.floor(Date.now() / 1000) - filters.timeframe;
+      const numericFilters = encodeURIComponent(`created_at_i>${timestamp},num_comments>=${filters.minComments}`);
+      const baseUrl = `https://hn.algolia.com/api/v1/search_by_date?tags=story&numericFilters=${numericFilters}&hitsPerPage=100`;
+
+      state.isLoading = true;
+      state.visibleCount = PAGE_SIZE;
+      elements.apply.disabled = true;
+      elements.list.setAttribute('aria-busy', 'true');
+      setStatus('Finding conversations…', true);
+      renderSkeletons();
+
+      try {
+        const firstPage = await fetchApiPage(baseUrl, 0);
+        const pageCount = Math.min(Number(firstPage.nbPages || 1), MAX_API_PAGES);
+        const remaining = await Promise.all(
+          Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => fetchApiPage(baseUrl, index + 1))
+        );
+        const hits = [firstPage, ...remaining].flatMap(page => Array.isArray(page.hits) ? page.hits : []);
+        const uniqueHits = [...new Map(hits.map(hit => [String(hit.objectID), hit])).values()];
+        state.stories = sortStories(uniqueHits, filters.sort).map((story, index) => ({ ...story, rank: index + 1 }));
+        state.isTruncated = Number(firstPage.nbPages || 0) > MAX_API_PAGES;
+
+        const timeframeLabel = elements.timeframe.selectedOptions[0].textContent.toLowerCase();
+        const truncation = state.isTruncated ? ' · first 1,000 matches' : '';
+        setStatus(
+          `${state.stories.length.toLocaleString()} ${state.stories.length === 1 ? 'story' : 'stories'} · ${timeframeLabel} · ${filters.minComments}+ comments${truncation}`
+        );
+        renderStories();
+      } catch (error) {
+        setStatus('Stories could not be loaded.');
+        elements.list.replaceChildren();
+        const section = document.createElement('section');
+        section.className = 'error-state';
+        const heading = document.createElement('h2');
+        heading.textContent = 'Something went wrong';
+        const detail = document.createElement('p');
+        detail.textContent = error instanceof Error ? error.message : 'Please try again.';
+        const retry = document.createElement('button');
+        retry.className = 'retry-button';
+        retry.type = 'button';
+        retry.textContent = 'Try again';
+        retry.addEventListener('click', fetchStories);
+        section.append(heading, detail, retry);
+        elements.list.append(section);
+      } finally {
+        state.isLoading = false;
+        elements.apply.disabled = false;
+        elements.list.setAttribute('aria-busy', 'false');
+      }
+    }
+
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem(THEME_KEY, theme);
+      const useLight = theme === 'dark';
+      elements.theme.textContent = useLight ? '☀' : '☾';
+      elements.theme.setAttribute('aria-label', `Use ${useLight ? 'light' : 'dark'} theme`);
+    }
+
+    function initializeTheme() {
+      const stored = localStorage.getItem(THEME_KEY);
+      const preferred = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      setTheme(stored === 'light' || stored === 'dark' ? stored : preferred);
+    }
+
+    elements.form.addEventListener('submit', event => {
+      event.preventDefault();
+      fetchStories();
+    });
+    elements.list.addEventListener('click', event => {
+      const link = event.target.closest('[data-read-target]');
+      if (link) setRead(link.dataset.readTarget, true);
+    });
+    elements.theme.addEventListener('click', () => {
+      setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+    });
+
+    applySavedFilters();
+    initializeTheme();
+    fetchStories();
+  </script>
 </body>
 </html>
