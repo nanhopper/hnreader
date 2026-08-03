@@ -118,6 +118,13 @@
       transition: box-shadow 0.15s;
     }
 
+    @media (hover: none) {
+      .filter-shell {
+        background: var(--surface);
+        backdrop-filter: none;
+      }
+    }
+
     .filter-inner {
       display: grid;
       grid-template-columns: 1.05fr 1fr 1fr;
@@ -947,13 +954,34 @@
 
     applySavedFilters();
     initializeTheme();
-    new IntersectionObserver(([entry]) => {
-      elements.filterShell.classList.toggle('is-stuck', !entry.isIntersecting);
-      if (entry.isIntersecting) {
+    const siteHeader = document.querySelector('.site-header');
+    let stuck = false;
+    let stickyFrame = 0;
+
+    function updateStuckState() {
+      stickyFrame = 0;
+      const headerHeight = siteHeader.offsetHeight;
+      // Hysteresis: collapsing the filter shell shortens the page, so a single
+      // threshold can flip the state back and forth and cause scroll jitter.
+      const threshold = stuck ? Math.max(headerHeight - 48, 0) : headerHeight;
+      const nextStuck = window.scrollY > threshold;
+      if (nextStuck === stuck) return;
+      stuck = nextStuck;
+      elements.filterShell.classList.toggle('is-stuck', stuck);
+      if (!stuck) {
         elements.filterShell.classList.remove('is-expanded');
         elements.filterToggle.setAttribute('aria-expanded', 'false');
       }
-    }).observe(document.querySelector('.site-header'));
+    }
+
+    function scheduleStuckUpdate() {
+      if (stickyFrame) return;
+      stickyFrame = requestAnimationFrame(updateStuckState);
+    }
+
+    window.addEventListener('scroll', scheduleStuckUpdate, { passive: true });
+    window.addEventListener('resize', scheduleStuckUpdate);
+    updateStuckState();
     fetchStories();
   </script>
 </body>
