@@ -54,9 +54,9 @@
       line-height: 1.5;
     }
 
-    button, select, input { font: inherit; }
+    button, input { font: inherit; }
 
-    a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible {
+    a:focus-visible, button:focus-visible, input:focus-visible {
       outline: 3px solid var(--focus);
       outline-offset: 2px;
     }
@@ -115,24 +115,29 @@
       border-bottom: 1px solid var(--border);
       background: color-mix(in srgb, var(--surface) 94%, transparent);
       backdrop-filter: blur(10px);
+      transition: box-shadow 0.15s;
     }
 
     .filter-inner {
       display: grid;
-      grid-template-columns: 1fr 1fr 1.15fr auto;
+      grid-template-columns: 1.05fr 1fr 1fr;
       align-items: end;
       gap: 10px;
       padding-block: 12px;
     }
 
     .control-group {
+      margin: 0;
+      padding: 0;
+      border: 0;
       display: flex;
       min-width: 0;
       flex-direction: column;
       gap: 4px;
     }
 
-    .control-group label {
+    .control-group legend {
+      padding: 0;
       color: var(--text-muted);
       font-size: 0.7rem;
       font-weight: 600;
@@ -140,19 +145,93 @@
       text-transform: uppercase;
     }
 
-    select, input[type="number"] {
-      width: 100%;
-      min-height: 40px;
-      padding: 7px 9px;
+    .segmented-control {
+      display: grid;
+      grid-template-columns: repeat(var(--segments), minmax(0, 1fr));
+      overflow: hidden;
       border: 1px solid var(--border);
       border-radius: 8px;
       background: var(--bg);
-      color: var(--text);
     }
 
-    select:hover, input[type="number"]:hover { border-color: var(--border-strong); }
+    .segmented-control input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
 
-    .apply-button, .load-more, .retry-button {
+    .segment-label {
+      min-width: 0;
+      min-height: 40px;
+      padding: 9px 4px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-align: center;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .segment-label + input + .segment-label {
+      border-left: 1px solid var(--border);
+    }
+
+    .segmented-control input:checked + .segment-label {
+      background: var(--accent-soft);
+      color: var(--accent);
+      box-shadow: inset 0 -2px var(--accent);
+    }
+
+    .segmented-control input:focus-visible + .segment-label {
+      position: relative;
+      z-index: 1;
+      outline: 3px solid var(--focus);
+      outline-offset: -3px;
+    }
+
+    .segment-label:hover { color: var(--text); }
+
+    .filter-summary {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: min(calc(100% - 32px), var(--content-width));
+      min-height: 44px;
+      margin-inline: auto;
+    }
+
+    .filter-summary-text {
+      overflow: hidden;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .filter-summary-toggle {
+      flex: 0 0 auto;
+      padding: 5px 9px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .filter-shell.is-stuck {
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    }
+
+    .filter-shell.is-stuck .filter-summary { display: flex; }
+    .filter-shell.is-stuck:not(.is-expanded) .filter-inner { display: none; }
+
+    .load-more, .retry-button {
       min-height: 40px;
       padding: 8px 16px;
       border: 1px solid var(--accent);
@@ -163,12 +242,10 @@
       cursor: pointer;
     }
 
-    .apply-button:hover, .load-more:hover, .retry-button:hover {
+    .load-more:hover, .retry-button:hover {
       border-color: var(--accent-hover);
       background: var(--accent-hover);
     }
-
-    .apply-button:disabled { cursor: wait; opacity: 0.65; }
 
     .status-bar {
       min-height: 42px;
@@ -387,14 +464,13 @@
         width: min(calc(100% - 24px), var(--content-width));
       }
 
-      .filter-inner { grid-template-columns: 1fr 1fr; }
-      .apply-button { width: 100%; }
+      .filter-inner { grid-template-columns: 1fr; }
+      .filter-summary { width: min(calc(100% - 24px), var(--content-width)); }
       .story-title-row { display: block; }
       .comment-count { display: inline-block; margin-top: 8px; }
     }
 
     @media (max-width: 440px) {
-      .filter-inner { grid-template-columns: 1fr; }
       .story-card { padding: 15px; }
       .action-bar { flex-wrap: wrap; }
       .story-action { flex: 1; }
@@ -423,29 +499,48 @@
   </header>
 
   <div class="filter-shell">
+    <div class="filter-summary">
+      <span class="filter-summary-text" id="filter-summary-text"></span>
+      <button class="filter-summary-toggle" id="filter-summary-toggle" type="button" aria-expanded="false" aria-controls="filter-form">Filters</button>
+    </div>
     <form class="filter-inner" id="filter-form">
-      <div class="control-group">
-        <label for="timeframe">Timeframe</label>
-        <select id="timeframe" name="timeframe">
-          <option value="86400">24 hours</option>
-          <option value="259200">3 days</option>
-          <option value="604800">7 days</option>
-          <option value="2592000">30 days</option>
-        </select>
-      </div>
-      <div class="control-group">
-        <label for="min-comments">Minimum comments</label>
-        <input id="min-comments" name="minComments" type="number" value="100" min="0" max="10000" step="10" required />
-      </div>
-      <div class="control-group">
-        <label for="sort-by">Sort by</label>
-        <select id="sort-by" name="sort">
-          <option value="comments">Most commented</option>
-          <option value="points">Most points</option>
-          <option value="recent">Most recent</option>
-        </select>
-      </div>
-      <button class="apply-button" id="apply-button" type="submit">Apply</button>
+      <fieldset class="control-group">
+        <legend>Timeframe</legend>
+        <div class="segmented-control" style="--segments: 4">
+          <input id="timeframe-24h" name="timeframe" type="radio" value="86400" />
+          <label class="segment-label" for="timeframe-24h">24h</label>
+          <input id="timeframe-3d" name="timeframe" type="radio" value="259200" />
+          <label class="segment-label" for="timeframe-3d">3d</label>
+          <input id="timeframe-7d" name="timeframe" type="radio" value="604800" />
+          <label class="segment-label" for="timeframe-7d">7d</label>
+          <input id="timeframe-30d" name="timeframe" type="radio" value="2592000" />
+          <label class="segment-label" for="timeframe-30d">30d</label>
+        </div>
+      </fieldset>
+      <fieldset class="control-group">
+        <legend>Minimum comments</legend>
+        <div class="segmented-control" style="--segments: 4">
+          <input id="comments-0" name="minComments" type="radio" value="0" />
+          <label class="segment-label" for="comments-0">Any</label>
+          <input id="comments-50" name="minComments" type="radio" value="50" />
+          <label class="segment-label" for="comments-50">50+</label>
+          <input id="comments-100" name="minComments" type="radio" value="100" />
+          <label class="segment-label" for="comments-100">100+</label>
+          <input id="comments-200" name="minComments" type="radio" value="200" />
+          <label class="segment-label" for="comments-200">200+</label>
+        </div>
+      </fieldset>
+      <fieldset class="control-group">
+        <legend>Sort by</legend>
+        <div class="segmented-control" style="--segments: 3">
+          <input id="sort-comments" name="sort" type="radio" value="comments" />
+          <label class="segment-label" for="sort-comments">Comments</label>
+          <input id="sort-points" name="sort" type="radio" value="points" />
+          <label class="segment-label" for="sort-points">Points</label>
+          <input id="sort-recent" name="sort" type="radio" value="recent" />
+          <label class="segment-label" for="sort-recent">Recent</label>
+        </div>
+      </fieldset>
     </form>
   </div>
 
@@ -468,15 +563,16 @@
       stories: [],
       visibleCount: PAGE_SIZE,
       isLoading: false,
-      isTruncated: false
+      isTruncated: false,
+      requestId: 0,
+      controller: null
     };
 
     const elements = {
       form: document.getElementById('filter-form'),
-      timeframe: document.getElementById('timeframe'),
-      minComments: document.getElementById('min-comments'),
-      sort: document.getElementById('sort-by'),
-      apply: document.getElementById('apply-button'),
+      filterShell: document.querySelector('.filter-shell'),
+      filterSummary: document.getElementById('filter-summary-text'),
+      filterToggle: document.getElementById('filter-summary-toggle'),
       status: document.getElementById('status-bar'),
       list: document.getElementById('story-list'),
       theme: document.getElementById('theme-toggle')
@@ -681,11 +777,32 @@
     }
 
     function getFilters() {
+      const data = new FormData(elements.form);
       return {
-        timeframe: Number(elements.timeframe.value),
-        minComments: Math.max(0, Number(elements.minComments.value)),
-        sort: elements.sort.value
+        timeframe: Number(data.get('timeframe')),
+        minComments: Number(data.get('minComments')),
+        sort: String(data.get('sort'))
       };
+    }
+
+    function selectFilter(name, value, fallback) {
+      const options = [...elements.form.querySelectorAll(`input[name="${name}"]`)];
+      const selected = options.find(option => option.value === String(value))
+        || options.find(option => option.value === fallback);
+      if (selected) selected.checked = true;
+    }
+
+    function selectedFilterLabel(name) {
+      const selected = elements.form.querySelector(`input[name="${name}"]:checked`);
+      return selected ? elements.form.querySelector(`label[for="${selected.id}"]`).textContent : '';
+    }
+
+    function updateFilterSummary() {
+      elements.filterSummary.textContent = [
+        selectedFilterLabel('timeframe'),
+        selectedFilterLabel('minComments'),
+        selectedFilterLabel('sort')
+      ].join(' · ');
     }
 
     function applySavedFilters() {
@@ -701,14 +818,10 @@
         minComments: params.get('minComments') ?? saved.minComments ?? '100',
         sort: params.get('sort') || saved.sort || 'comments'
       };
-      if ([...elements.timeframe.options].some(option => option.value === String(values.timeframe))) {
-        elements.timeframe.value = String(values.timeframe);
-      }
-      if ([...elements.sort.options].some(option => option.value === values.sort)) {
-        elements.sort.value = values.sort;
-      }
-      const minimum = Number(values.minComments);
-      elements.minComments.value = Number.isFinite(minimum) ? Math.min(10000, Math.max(0, minimum)) : 100;
+      selectFilter('timeframe', values.timeframe, '604800');
+      selectFilter('minComments', values.minComments, '100');
+      selectFilter('sort', values.sort, 'comments');
+      updateFilterSummary();
     }
 
     function saveFilters(filters) {
@@ -729,16 +842,22 @@
       return stories.sort(comparisons[sortBy] || comparisons.comments);
     }
 
-    async function fetchApiPage(baseUrl, page) {
-      const response = await fetch(`${baseUrl}&page=${page}`);
+    async function fetchApiPage(baseUrl, page, signal) {
+      const response = await fetch(`${baseUrl}&page=${page}`, { signal });
       if (!response.ok) throw new Error(`The news service returned HTTP ${response.status}.`);
       return response.json();
     }
 
     async function fetchStories() {
-      if (state.isLoading || !elements.form.reportValidity()) return;
+      if (!elements.form.reportValidity()) return;
       const filters = getFilters();
       saveFilters(filters);
+      updateFilterSummary();
+
+      state.controller?.abort();
+      state.controller = new AbortController();
+      const { signal } = state.controller;
+      const requestId = ++state.requestId;
 
       const timestamp = Math.floor(Date.now() / 1000) - filters.timeframe;
       const numericFilters = encodeURIComponent(`created_at_i>${timestamp},num_comments>=${filters.minComments}`);
@@ -746,29 +865,30 @@
 
       state.isLoading = true;
       state.visibleCount = PAGE_SIZE;
-      elements.apply.disabled = true;
       elements.list.setAttribute('aria-busy', 'true');
       setStatus('Finding conversations…', true);
       renderSkeletons();
 
       try {
-        const firstPage = await fetchApiPage(baseUrl, 0);
+        const firstPage = await fetchApiPage(baseUrl, 0, signal);
         const pageCount = Math.min(Number(firstPage.nbPages || 1), MAX_API_PAGES);
         const remaining = await Promise.all(
-          Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => fetchApiPage(baseUrl, index + 1))
+          Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => fetchApiPage(baseUrl, index + 1, signal))
         );
+        if (requestId !== state.requestId) return;
         const hits = [firstPage, ...remaining].flatMap(page => Array.isArray(page.hits) ? page.hits : []);
         const uniqueHits = [...new Map(hits.map(hit => [String(hit.objectID), hit])).values()];
         state.stories = sortStories(uniqueHits, filters.sort).map((story, index) => ({ ...story, rank: index + 1 }));
         state.isTruncated = Number(firstPage.nbPages || 0) > MAX_API_PAGES;
 
-        const timeframeLabel = elements.timeframe.selectedOptions[0].textContent.toLowerCase();
+        const timeframeLabel = selectedFilterLabel('timeframe');
         const truncation = state.isTruncated ? ' · first 1,000 matches' : '';
         setStatus(
           `${state.stories.length.toLocaleString()} ${state.stories.length === 1 ? 'story' : 'stories'} · ${timeframeLabel} · ${filters.minComments}+ comments${truncation}`
         );
         renderStories();
       } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
         setStatus('Stories could not be loaded.');
         elements.list.replaceChildren();
         const section = document.createElement('section');
@@ -785,9 +905,11 @@
         section.append(heading, detail, retry);
         elements.list.append(section);
       } finally {
-        state.isLoading = false;
-        elements.apply.disabled = false;
-        elements.list.setAttribute('aria-busy', 'false');
+        if (requestId === state.requestId) {
+          state.isLoading = false;
+          state.controller = null;
+          elements.list.setAttribute('aria-busy', 'false');
+        }
       }
     }
 
@@ -805,9 +927,15 @@
       setTheme(stored === 'light' || stored === 'dark' ? stored : preferred);
     }
 
-    elements.form.addEventListener('submit', event => {
-      event.preventDefault();
+    elements.form.addEventListener('change', () => {
+      elements.filterShell.classList.remove('is-expanded');
+      elements.filterToggle.setAttribute('aria-expanded', 'false');
       fetchStories();
+    });
+    elements.form.addEventListener('submit', event => event.preventDefault());
+    elements.filterToggle.addEventListener('click', () => {
+      const isExpanded = elements.filterShell.classList.toggle('is-expanded');
+      elements.filterToggle.setAttribute('aria-expanded', String(isExpanded));
     });
     elements.list.addEventListener('click', event => {
       const link = event.target.closest('[data-read-target]');
@@ -819,6 +947,13 @@
 
     applySavedFilters();
     initializeTheme();
+    new IntersectionObserver(([entry]) => {
+      elements.filterShell.classList.toggle('is-stuck', !entry.isIntersecting);
+      if (entry.isIntersecting) {
+        elements.filterShell.classList.remove('is-expanded');
+        elements.filterToggle.setAttribute('aria-expanded', 'false');
+      }
+    }).observe(document.querySelector('.site-header'));
     fetchStories();
   </script>
 </body>
