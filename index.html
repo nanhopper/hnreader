@@ -963,7 +963,9 @@
       const headerHeight = siteHeader.offsetHeight;
       // Hysteresis: collapsing the filter shell shortens the page, so a single
       // threshold can flip the state back and forth and cause scroll jitter.
-      const threshold = stuck ? Math.max(headerHeight - 48, 0) : headerHeight;
+      // We must offset the unstuck threshold by more than the height lost when it collapses,
+      // otherwise scroll anchoring will instantly pull the scroll position below the threshold.
+      const threshold = stuck ? headerHeight : headerHeight + elements.filterShell.offsetHeight + 10;
       const nextStuck = window.scrollY > threshold;
       if (nextStuck === stuck) return;
       stuck = nextStuck;

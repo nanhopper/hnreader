@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { margin: 0; padding: 0; font-family: sans-serif; }
+  .header { height: 100px; background: red; overflow-anchor: none; }
+  .sticky { position: sticky; top: 0; background: blue; color: white; overflow-anchor: none; }
+  .sticky.stuck { height: 50px; }
+  .sticky:not(.stuck) { height: 250px; }
+  .content { height: 5000px; background: linear-gradient(white, black); }
+</style>
+</head>
+<body>
+  <div class="header">Header</div>
+  <div class="sticky" id="sticky">Sticky</div>
+  <div class="content"></div>
+  <script>
+    const sticky = document.getElementById('sticky');
+    let stuck = false;
+    window.addEventListener('scroll', () => {
+      const isStuck = window.scrollY > 100;
+      if (isStuck !== stuck) {
+        stuck = isStuck;
+        sticky.classList.toggle('stuck', stuck);
+      }
+    });
+  </script>
+</body>
+</html>
