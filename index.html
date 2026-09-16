@@ -127,7 +127,7 @@
 
     .filter-inner {
       display: grid;
-      grid-template-columns: 1.05fr 1fr 1fr;
+      grid-template-columns: 0.75fr 1.05fr 1.2fr;
       align-items: end;
       gap: 10px;
       padding-block: 12px;
@@ -173,10 +173,12 @@
       min-width: 0;
       min-height: 40px;
       padding: 9px 4px;
+      overflow: hidden;
       color: var(--text-muted);
       font-size: 0.78rem;
       font-weight: 600;
       text-align: center;
+      text-overflow: ellipsis;
       white-space: nowrap;
       cursor: pointer;
       transition: background 0.15s, color 0.15s;
@@ -330,13 +332,6 @@
 
     .story-card.read .read-label { display: inline-block; }
 
-    .story-title-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: start;
-      gap: 16px;
-    }
-
     .story-title {
       color: var(--heading);
       font-size: 1.05rem;
@@ -346,14 +341,6 @@
     }
 
     .story-title:hover { color: var(--accent); }
-
-    .comment-count {
-      color: var(--accent);
-      font-size: 0.86rem;
-      font-weight: 700;
-      line-height: 1.4;
-      white-space: nowrap;
-    }
 
     .story-meta {
       display: flex;
@@ -493,8 +480,6 @@
 
       .filter-inner { grid-template-columns: 1fr; }
       .filter-summary { width: min(calc(100% - 24px), var(--content-width)); }
-      .story-title-row { display: block; }
-      .comment-count { display: inline-block; margin-top: 8px; }
     }
 
     @media (max-width: 440px) {
@@ -795,8 +780,6 @@
       readLabel.textContent = 'Read';
       context.append(' ', readLabel);
 
-      const titleRow = document.createElement('div');
-      titleRow.className = 'story-title-row';
       const heading = document.createElement('h2');
       heading.style.margin = '0';
       heading.style.fontSize = 'inherit';
@@ -804,20 +787,20 @@
       title.dataset.readTarget = String(story.objectID);
       heading.append(title);
 
-      const comments = makeLink('comment-count', `${Number(story.num_comments || 0).toLocaleString()} comments`, hnUrl);
-      comments.dataset.readTarget = String(story.objectID);
-      titleRow.append(heading, comments);
-
-      const points = document.createElement('div');
-      points.className = 'story-meta';
-      appendText(points, `${Number(story.points || 0).toLocaleString()} points`);
+      const meta = document.createElement('div');
+      meta.className = 'story-meta';
+      const commentCount = Number(story.num_comments || 0);
+      appendText(
+        meta,
+        `${Number(story.points || 0).toLocaleString()} points · ${commentCount.toLocaleString()} ${commentCount === 1 ? 'comment' : 'comments'}`
+      );
 
       const isFlagged = Number(story.ember) >= state.ember.bar;
       const ember = document.createElement('span');
       ember.className = `ember-pill${isFlagged ? ' flagged' : ''}`;
       ember.textContent = isFlagged ? `Ember ${story.emberPercentile} · don't miss` : `Ember ${story.emberPercentile}`;
       ember.title = `Ember ${Number(story.ember).toFixed(2)} · ${story.emberPercentile}th percentile of the stories loaded`;
-      points.append('·', ember);
+      meta.append(ember);
 
       const actions = document.createElement('div');
       actions.className = 'action-bar';
@@ -841,7 +824,7 @@
       });
       actions.append(readToggle);
 
-      article.append(context, titleRow, points, actions);
+      article.append(context, heading, meta, actions);
       return article;
     }
 
