@@ -809,7 +809,7 @@
       actions.append(discuss);
 
       if (articleUrl) {
-        const readArticle = makeLink('story-action article-action', 'Read article ↗', articleUrl);
+        const readArticle = makeLink('story-action article-action', 'Submission', articleUrl);
         readArticle.dataset.readTarget = String(story.objectID);
         actions.append(readArticle);
       }
