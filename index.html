@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="dark light" />
   <title>HN Reader — Comments First</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='%23ff7a1a'%3E%3Cpath d='M9.6 4.6h12.8l6.4 8L16 28.4 3.2 12.6z' opacity='.32'/%3E%3Cpath d='M9.6 4.6h12.8l-3.2 8h-6.4z'/%3E%3Cpath d='M12.8 12.6 16 28.4l3.2-15.8z' opacity='.8'/%3E%3C/g%3E%3C/svg%3E" />
   <style>
     :root {
       color-scheme: dark;
@@ -87,7 +88,25 @@
       letter-spacing: -0.03em;
     }
 
-    .brand-mark { color: var(--accent); }
+    .brand-mark {
+      width: 1.05em;
+      height: 1.05em;
+      flex: none;
+      color: var(--accent);
+      vertical-align: -0.12em;
+    }
+
+    .ember-mark {
+      width: 1.1em;
+      height: 1.1em;
+      flex: none;
+    }
+
+    .segment-label .ember-mark {
+      display: inline-block;
+      margin-right: 4px;
+      vertical-align: -0.17em;
+    }
 
     .tagline {
       margin: 4px 0 0;
@@ -353,7 +372,10 @@
     }
 
     .ember-pill {
-      padding: 1px 7px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1px 8px 1px 6px;
       border: 1px solid var(--border);
       border-radius: 999px;
       font-size: 0.7rem;
@@ -503,7 +525,7 @@
   <header class="site-header">
     <div class="header-inner">
       <div>
-        <h1><span class="brand-mark" aria-hidden="true">▲</span> HN Reader</h1>
+        <h1><svg class="brand-mark" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M9.6 4.6h12.8l6.4 8L16 28.4 3.2 12.6z" opacity=".32" /><path d="M9.6 4.6h12.8l-3.2 8h-6.4z" /><path d="M12.8 12.6 16 28.4l3.2-15.8z" opacity=".8" /></svg> HN Reader</h1>
         <p class="tagline">The conversations worth catching</p>
       </div>
       <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Use light theme" title="Change theme">☀</button>
@@ -548,7 +570,7 @@
         <legend>Sort by</legend>
         <div class="segmented-control" style="--segments: 4">
           <input id="sort-ember" name="sort" type="radio" value="ember" />
-          <label class="segment-label" for="sort-ember" title="Maturity-adjusted score that rewards discussion but penalises flamewars">Ember</label>
+          <label class="segment-label" for="sort-ember" title="Maturity-adjusted score that rewards discussion but penalises flamewars"><svg class="ember-mark" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M9.6 4.6h12.8l6.4 8L16 28.4 3.2 12.6z" opacity=".32" /><path d="M9.6 4.6h12.8l-3.2 8h-6.4z" /><path d="M12.8 12.6 16 28.4l3.2-15.8z" opacity=".8" /></svg>Ember</label>
           <input id="sort-comments" name="sort" type="radio" value="comments" />
           <label class="segment-label" for="sort-comments">Comments</label>
           <input id="sort-points" name="sort" type="radio" value="points" />
@@ -567,6 +589,8 @@
     Data from <a href="https://hn.algolia.com/api" target="_blank" rel="noopener noreferrer">HN Algolia API</a>
     · Stories from <a href="https://news.ycombinator.com" target="_blank" rel="noopener noreferrer">Hacker News</a>
   </footer>
+
+  <template id="ember-mark-template"><svg class="ember-mark" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M9.6 4.6h12.8l6.4 8L16 28.4 3.2 12.6z" opacity=".32" /><path d="M9.6 4.6h12.8l-3.2 8h-6.4z" /><path d="M12.8 12.6 16 28.4l3.2-15.8z" opacity=".8" /></svg></template>
 
   <script>
     const READ_KEY = 'hn_read_stories';
@@ -610,8 +634,13 @@
       filterToggle: document.getElementById('filter-summary-toggle'),
       status: document.getElementById('status-bar'),
       list: document.getElementById('story-list'),
-      theme: document.getElementById('theme-toggle')
+      theme: document.getElementById('theme-toggle'),
+      emberMark: document.getElementById('ember-mark-template')
     };
+
+    function emberMark() {
+      return elements.emberMark.content.firstElementChild.cloneNode(true);
+    }
 
     function emberParamName(key) {
       return `ember${key[0].toUpperCase()}${key.slice(1)}`;
@@ -802,7 +831,8 @@
       const score = Number(story.ember).toFixed(1);
       const ember = document.createElement('span');
       ember.className = `ember-pill${isFlagged ? ' flagged' : ''}`;
-      ember.textContent = isFlagged ? `Ember ${score} · don't miss` : `Ember ${score}`;
+      ember.append(emberMark(), document.createTextNode(isFlagged ? `${score} · don't miss` : score));
+      ember.setAttribute('aria-label', isFlagged ? `Ember ${score}, not to miss` : `Ember ${score}`);
       ember.title = `Ember ${score} on an absolute log scale — every +1 is roughly 2.7x the reception.`
         + `\nStories at or above ${state.ember.bar} are flagged as not to miss.`;
       meta.append(ember);
