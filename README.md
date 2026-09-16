@@ -8,10 +8,10 @@ The HN front page ranks stories by a points/time decay formula, and raw sorts ha
 
 ## Features
 
-- 🔥 **Ember** — a tunable score that ranks the few stories you shouldn't miss today
+- 🔥 **Ember** — an absolute score that ranks the few stories you shouldn't miss today
 - 🔎 Find and rank HN stories over 24 h / 3 d / 7 d / 30 d windows
-- ⚙️ Filter by discussion size and sort by Ember, comments, points, or recency
-- 🔗 Open the original article from its headline or jump directly to the HN discussion
+- ⏱️ Trim the list to the time you actually have with a minimum-Ember threshold
+- 🔗 Open the original submission from its headline or jump straight to the HN comments
 - ✅ Track read stories locally, with controls to mark them read or unread
 - 🔖 Persist filters and reflect them in the URL for bookmarkable, shareable views
 - 🌓 Responsive light and dark themes — zero external dependencies
@@ -35,7 +35,19 @@ Two corrections are doing the work:
 - **Maturity projection.** Votes and comments accrue on a saturating curve, so a 3-hour-old story is a censored sample and can never win a raw-count sort. Dividing by $f(a)$ estimates where it will land, which surfaces breakouts hours earlier and makes everything in the window comparable. Capped at 5× so nothing brand new explodes.
 - **Heat penalty.** Comments add value sublinearly up to a point; past it, a high ratio means an argument or a re-litigated topic rather than depth. The net exponent on $r$ is $+0.5$ below the threshold and $-1.0$ above it — an inverted-U, not a straight reward.
 
-Stories scoring at or above the bar are badged **don't miss**. It's an absolute threshold, not a top-N: on a dull day it correctly returns nothing.
+The scale is **absolute and logarithmic**: a score means the same thing in every timeframe, and every $+1$ is roughly $2.7\times$ the reception. Typical values run from 4 to 11. Stories at or above `emberBar` are badged **don't miss** — an absolute threshold, not a top-N, so on a dull day it correctly returns nothing.
+
+### Choosing a threshold
+
+The **Minimum Ember** control is the volume knob: pick the floor that matches the time you have. Measured against a live 24-hour window:
+
+| Floor | Stories | Reading session |
+|---|---|---|
+| Any | ~190 | Browsing |
+| 7.5+ | ~22 | A coffee |
+| 8.5+ | ~10 | Ten minutes |
+| 9+ | ~7 | Five minutes |
+| 9.5+ | ~2 | The ones you'd regret missing |
 
 ### Tuning
 
@@ -46,18 +58,21 @@ The four constants are experiments, not settled truth. Override any of them with
 | `emberHeat` | $h$ | `1.2` | Ratio at which comments start counting against a story. Lower is stricter about flamewars. |
 | `emberWeight` | $w$ | `1.5` | How hard the heat penalty bites. `0` disables it. |
 | `emberMaturity` | $m$ | `6` | Accumulation-curve time constant in hours. Lower favours fresh stories more aggressively. |
-| `emberBar` | — | `8.6` | Score needed for the **don't miss** badge. |
+| `emberBar` | — | `9.5` | Score needed for the **don't miss** badge. |
 
 ```
-index.html?sort=ember&timeframe=86400&emberHeat=0.9&emberBar=9
+index.html?sort=ember&timeframe=86400&minEmber=9&emberHeat=0.9
 ```
 
-Each card shows its Ember percentile within the loaded set; hover for the raw score.
+### A note on the API prefilter
 
-Verify the scoring behaves as designed with:
+The Algolia endpoint returns at most 1,000 hits, newest first, so an unfiltered 30-day query would silently discard everything older than its first thousand results. Each timeframe therefore carries a minimum-points prefilter (24 h → 5, 3 d → 10, 7 d → 20, 30 d → 200) chosen to keep the window under that cap. The floors sit far below anything Ember can rank, so nothing scoreable is lost.
+
+### Tests
 
 ```bash
-node test-ember.mjs
+node test-ember.mjs       # deterministic: scoring behaves as designed
+node test-thresholds.mjs  # live: windows stay under the API cap, floors stay useful
 ```
 
 ## Running Locally

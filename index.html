@@ -530,18 +530,18 @@
         </div>
       </fieldset>
       <fieldset class="control-group">
-        <legend>Minimum comments</legend>
+        <legend>Minimum Ember</legend>
         <div class="segmented-control" style="--segments: 5">
-          <input id="comments-0" name="minComments" type="radio" value="0" />
-          <label class="segment-label" for="comments-0">Any</label>
-          <input id="comments-100" name="minComments" type="radio" value="100" />
-          <label class="segment-label" for="comments-100">100+</label>
-          <input id="comments-200" name="minComments" type="radio" value="200" />
-          <label class="segment-label" for="comments-200">200+</label>
-          <input id="comments-500" name="minComments" type="radio" value="500" />
-          <label class="segment-label" for="comments-500">500+</label>
-          <input id="comments-1000" name="minComments" type="radio" value="1000" />
-          <label class="segment-label" for="comments-1000">1000+</label>
+          <input id="ember-0" name="minEmber" type="radio" value="0" />
+          <label class="segment-label" for="ember-0">Any</label>
+          <input id="ember-75" name="minEmber" type="radio" value="7.5" />
+          <label class="segment-label" for="ember-75">7.5+</label>
+          <input id="ember-85" name="minEmber" type="radio" value="8.5" />
+          <label class="segment-label" for="ember-85">8.5+</label>
+          <input id="ember-90" name="minEmber" type="radio" value="9" />
+          <label class="segment-label" for="ember-90">9+</label>
+          <input id="ember-95" name="minEmber" type="radio" value="9.5" />
+          <label class="segment-label" for="ember-95">9.5+</label>
         </div>
       </fieldset>
       <fieldset class="control-group">
@@ -579,12 +579,19 @@
     // Ember: log-magnitude of a story's reception, discounted when the
     // comment-to-point ratio says "argument" rather than "substance", and
     // projected forward so young stories compete fairly with mature ones.
-    const EMBER_DEFAULTS = { heat: 1.2, weight: 1.5, maturity: 6, bar: 8.6 };
+    // The scale is absolute and logarithmic: +1 is roughly 2.7x the reception.
+    const EMBER_DEFAULTS = { heat: 1.2, weight: 1.5, maturity: 6, bar: 9.5 };
     const EMBER_LIMITS = { heat: [0.05, 20], weight: [0, 6], maturity: [0.5, 72], bar: [0, 20] };
     const EMBER_COMMENT_WEIGHT = 0.5;
     const EMBER_MATURITY_FLOOR = 0.2;
     const EMBER_STALENESS_WEIGHT = 0.25;
     const EMBER_STALENESS_GRACE_HOURS = 24;
+
+    // The API returns at most 1,000 hits, newest first, so an unfiltered long
+    // window would silently drop its older half. These floors keep every
+    // window under that cap; they sit far below anything Ember can rank.
+    const MIN_POINTS_BY_TIMEFRAME = { 86400: 5, 259200: 10, 604800: 20, 2592000: 200 };
+    const DEFAULT_MIN_POINTS = 20;
 
     const state = {
       stories: [],
@@ -653,11 +660,7 @@
 
     function scoreStories(stories) {
       const nowSeconds = Date.now() / 1000;
-      const scored = stories.map(story => ({ ...story, ember: emberScore(story, nowSeconds, state.ember) }));
-      const ascending = [...scored].sort((a, b) => a.ember - b.ember);
-      const span = Math.max(1, ascending.length - 1);
-      const percentiles = new Map(ascending.map((story, index) => [story, Math.round((100 * index) / span)]));
-      return scored.map(story => ({ ...story, emberPercentile: percentiles.get(story) }));
+      return stories.map(story => ({ ...story, ember: emberScore(story, nowSeconds, state.ember) }));
     }
 
     function getReadSet() {
@@ -796,10 +799,12 @@
       );
 
       const isFlagged = Number(story.ember) >= state.ember.bar;
+      const score = Number(story.ember).toFixed(1);
       const ember = document.createElement('span');
       ember.className = `ember-pill${isFlagged ? ' flagged' : ''}`;
-      ember.textContent = isFlagged ? `Ember ${story.emberPercentile} · don't miss` : `Ember ${story.emberPercentile}`;
-      ember.title = `Ember ${Number(story.ember).toFixed(2)} · ${story.emberPercentile}th percentile of the stories loaded`;
+      ember.textContent = isFlagged ? `Ember ${score} · don't miss` : `Ember ${score}`;
+      ember.title = `Ember ${score} on an absolute log scale — every +1 is roughly 2.7x the reception.`
+        + `\nStories at or above ${state.ember.bar} are flagged as not to miss.`;
       meta.append(ember);
 
       const actions = document.createElement('div');
@@ -838,7 +843,7 @@
         const heading = document.createElement('h2');
         heading.textContent = 'No conversations found';
         const detail = document.createElement('p');
-        detail.textContent = 'Try a longer timeframe or a lower comment minimum.';
+        detail.textContent = 'Try a longer timeframe or a lower Ember minimum.';
         empty.append(heading, detail);
         elements.list.append(empty);
         return;
@@ -867,7 +872,7 @@
       const data = new FormData(elements.form);
       return {
         timeframe: Number(data.get('timeframe')),
-        minComments: Number(data.get('minComments')),
+        minEmber: Number(data.get('minEmber')),
         sort: String(data.get('sort'))
       };
     }
@@ -887,7 +892,7 @@
     function updateFilterSummary() {
       elements.filterSummary.textContent = [
         selectedFilterLabel('timeframe'),
-        selectedFilterLabel('minComments'),
+        `Ember ${selectedFilterLabel('minEmber')}`,
         selectedFilterLabel('sort')
       ].join(' · ');
     }
@@ -902,11 +907,11 @@
       const params = new URLSearchParams(location.search);
       const values = {
         timeframe: params.get('timeframe') || saved.timeframe || '604800',
-        minComments: params.get('minComments') ?? saved.minComments ?? '100',
+        minEmber: params.get('minEmber') ?? saved.minEmber ?? '8.5',
         sort: params.get('sort') || saved.sort || 'ember'
       };
       selectFilter('timeframe', values.timeframe, '604800');
-      selectFilter('minComments', values.minComments, '100');
+      selectFilter('minEmber', values.minEmber, '8.5');
       selectFilter('sort', values.sort, 'ember');
       state.ember = readEmberConfig();
       updateFilterSummary();
@@ -917,7 +922,7 @@
       localStorage.setItem(EMBER_KEY, JSON.stringify(state.ember));
       const params = new URLSearchParams();
       params.set('timeframe', filters.timeframe);
-      params.set('minComments', filters.minComments);
+      params.set('minEmber', filters.minEmber);
       params.set('sort', filters.sort);
       Object.keys(EMBER_DEFAULTS).forEach(key => {
         if (state.ember[key] !== EMBER_DEFAULTS[key]) params.set(emberParamName(key), state.ember[key]);
@@ -953,7 +958,8 @@
       const requestId = ++state.requestId;
 
       const timestamp = Math.floor(Date.now() / 1000) - filters.timeframe;
-      const numericFilters = encodeURIComponent(`created_at_i>${timestamp},num_comments>=${filters.minComments}`);
+      const minPoints = MIN_POINTS_BY_TIMEFRAME[filters.timeframe] ?? DEFAULT_MIN_POINTS;
+      const numericFilters = encodeURIComponent(`created_at_i>${timestamp},points>=${minPoints}`);
       const baseUrl = `https://hn.algolia.com/api/v1/search_by_date?tags=story&numericFilters=${numericFilters}&hitsPerPage=100`;
 
       state.isLoading = true;
@@ -971,15 +977,17 @@
         if (requestId !== state.requestId) return;
         const hits = [firstPage, ...remaining].flatMap(page => Array.isArray(page.hits) ? page.hits : []);
         const uniqueHits = [...new Map(hits.map(hit => [String(hit.objectID), hit])).values()];
-        state.stories = sortStories(scoreStories(uniqueHits), filters.sort).map((story, index) => ({ ...story, rank: index + 1 }));
+        const scored = scoreStories(uniqueHits).filter(story => story.ember >= filters.minEmber);
+        state.stories = sortStories(scored, filters.sort).map((story, index) => ({ ...story, rank: index + 1 }));
         state.isTruncated = Number(firstPage.nbPages || 0) > MAX_API_PAGES;
 
         const timeframeLabel = selectedFilterLabel('timeframe');
         const truncation = state.isTruncated ? ' · first 1,000 matches' : '';
         const flagged = state.stories.filter(story => Number(story.ember) >= state.ember.bar).length;
         const mustRead = flagged ? ` · ${flagged.toLocaleString()} not to miss` : '';
+        const emberLabel = filters.minEmber > 0 ? `Ember ${filters.minEmber}+` : 'any Ember';
         setStatus(
-          `${state.stories.length.toLocaleString()} ${state.stories.length === 1 ? 'story' : 'stories'} · ${timeframeLabel} · ${filters.minComments}+ comments${mustRead}${truncation}`
+          `${state.stories.length.toLocaleString()} ${state.stories.length === 1 ? 'story' : 'stories'} · ${timeframeLabel} · ${emberLabel}${mustRead}${truncation}`
         );
         renderStories();
       } catch (error) {
