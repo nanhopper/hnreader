@@ -599,6 +599,7 @@
     const EMBER_KEY = 'hn_reader_ember';
     const PAGE_SIZE = 25;
     const MAX_API_PAGES = 10;
+    const API_HITS_PER_PAGE = 100;
 
     // Ember: log-magnitude of a story's reception, discounted when the
     // comment-to-point ratio says "argument" rather than "substance", and
@@ -616,6 +617,7 @@
     // window under that cap; they sit far below anything Ember can rank.
     const MIN_POINTS_BY_TIMEFRAME = { 86400: 5, 259200: 10, 604800: 20, 2592000: 200 };
     const DEFAULT_MIN_POINTS = 20;
+    const RECENT_BAND_SECONDS = 86400;
 
     const state = {
       stories: [],
@@ -646,14 +648,18 @@
       return `ember${key[0].toUpperCase()}${key.slice(1)}`;
     }
 
+    function readStoredObject(key) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key) || '{}');
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+
     function readEmberConfig() {
       const params = new URLSearchParams(location.search);
-      let saved = {};
-      try {
-        saved = JSON.parse(localStorage.getItem(EMBER_KEY) || '{}');
-      } catch {
-        saved = {};
-      }
+      const saved = readStoredObject(EMBER_KEY);
       const config = { ...EMBER_DEFAULTS };
       Object.keys(EMBER_DEFAULTS).forEach(key => {
         const raw = params.get(emberParamName(key)) ?? saved[key];
@@ -928,12 +934,7 @@
     }
 
     function applySavedFilters() {
-      let saved = {};
-      try {
-        saved = JSON.parse(localStorage.getItem(FILTER_KEY) || '{}');
-      } catch {
-        saved = {};
-      }
+      const saved = readStoredObject(FILTER_KEY);
       const params = new URLSearchParams(location.search);
       const values = {
         timeframe: params.get('timeframe') || saved.timeframe || '604800',
@@ -976,6 +977,37 @@
       return response.json();
     }
 
+    // A high floor on a long window would hide fresh stories that Ember's
+    // maturity projection already rates highly, so the recent band is fetched
+    // separately at the lower floor its own window would use. Overlapping hits
+    // are deduplicated by objectID.
+    function windowQueries(timeframe) {
+      const now = Math.floor(Date.now() / 1000);
+      const minPoints = MIN_POINTS_BY_TIMEFRAME[timeframe] ?? DEFAULT_MIN_POINTS;
+      const queries = [{ since: now - timeframe, minPoints }];
+      const bandMinPoints = MIN_POINTS_BY_TIMEFRAME[RECENT_BAND_SECONDS];
+      if (timeframe > RECENT_BAND_SECONDS && minPoints > bandMinPoints) {
+        queries.push({ since: now - RECENT_BAND_SECONDS, minPoints: bandMinPoints });
+      }
+      return queries;
+    }
+
+    async function fetchWindow({ since, minPoints }, signal) {
+      const numericFilters = encodeURIComponent(`created_at_i>${since},points>=${minPoints}`);
+      const baseUrl = `https://hn.algolia.com/api/v1/search_by_date?tags=story&numericFilters=${numericFilters}&hitsPerPage=${API_HITS_PER_PAGE}`;
+      const firstPage = await fetchApiPage(baseUrl, 0, signal);
+      const pageCount = Math.min(Number(firstPage.nbPages || 1), MAX_API_PAGES);
+      const remaining = await Promise.all(
+        Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => fetchApiPage(baseUrl, index + 1, signal))
+      );
+      return {
+        hits: [firstPage, ...remaining].flatMap(page => Array.isArray(page.hits) ? page.hits : []),
+        // nbPages is itself clamped to the 1,000-hit cap, so it can never
+        // exceed MAX_API_PAGES. Only nbHits reports the true match count.
+        truncated: Number(firstPage.nbHits || 0) > MAX_API_PAGES * API_HITS_PER_PAGE
+      };
+    }
+
     async function fetchStories() {
       if (!elements.form.reportValidity()) return;
       const filters = getFilters();
@@ -987,11 +1019,6 @@
       const { signal } = state.controller;
       const requestId = ++state.requestId;
 
-      const timestamp = Math.floor(Date.now() / 1000) - filters.timeframe;
-      const minPoints = MIN_POINTS_BY_TIMEFRAME[filters.timeframe] ?? DEFAULT_MIN_POINTS;
-      const numericFilters = encodeURIComponent(`created_at_i>${timestamp},points>=${minPoints}`);
-      const baseUrl = `https://hn.algolia.com/api/v1/search_by_date?tags=story&numericFilters=${numericFilters}&hitsPerPage=100`;
-
       state.isLoading = true;
       state.visibleCount = PAGE_SIZE;
       elements.list.setAttribute('aria-busy', 'true');
@@ -999,17 +1026,15 @@
       renderSkeletons();
 
       try {
-        const firstPage = await fetchApiPage(baseUrl, 0, signal);
-        const pageCount = Math.min(Number(firstPage.nbPages || 1), MAX_API_PAGES);
-        const remaining = await Promise.all(
-          Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => fetchApiPage(baseUrl, index + 1, signal))
+        const results = await Promise.all(
+          windowQueries(filters.timeframe).map(query => fetchWindow(query, signal))
         );
         if (requestId !== state.requestId) return;
-        const hits = [firstPage, ...remaining].flatMap(page => Array.isArray(page.hits) ? page.hits : []);
+        const hits = results.flatMap(result => result.hits);
         const uniqueHits = [...new Map(hits.map(hit => [String(hit.objectID), hit])).values()];
         const scored = scoreStories(uniqueHits).filter(story => story.ember >= filters.minEmber);
         state.stories = sortStories(scored, filters.sort).map((story, index) => ({ ...story, rank: index + 1 }));
-        state.isTruncated = Number(firstPage.nbPages || 0) > MAX_API_PAGES;
+        state.isTruncated = results.some(result => result.truncated);
 
         const timeframeLabel = selectedFilterLabel('timeframe');
         const truncation = state.isTruncated ? ' · first 1,000 matches' : '';

@@ -11,26 +11,49 @@ const { emberScore, EMBER_DEFAULTS, MIN_POINTS_BY_TIMEFRAME, DEFAULT_MIN_POINTS 
 )();
 
 const MAX_API_PAGES = 10;
+const API_HITS_PER_PAGE = 100;
+const HIT_CAP = MAX_API_PAGES * API_HITS_PER_PAGE;
 const now = Math.floor(Date.now() / 1000);
 const timeframes = { '24h': 86400, '3d': 259200, '7d': 604800, '30d': 2592000 };
 const floors = [0, 7.5, 8.5, 9, 9.5];
 
-// Mirrors fetchStories: same prefilter, same paging, same scoring.
-async function load(timeframe) {
+// Mirrors fetchStories: same prefilter, same recent band, same paging, same scoring.
+const RECENT_BAND_SECONDS = 86400;
+
+function windowQueries(timeframe) {
   const minPoints = MIN_POINTS_BY_TIMEFRAME[timeframe] ?? DEFAULT_MIN_POINTS;
-  const numericFilters = encodeURIComponent(`created_at_i>${now - timeframe},points>=${minPoints}`);
-  const base = `https://hn.algolia.com/api/v1/search_by_date?tags=story&numericFilters=${numericFilters}&hitsPerPage=100`;
+  const queries = [{ since: now - timeframe, minPoints }];
+  const bandMinPoints = MIN_POINTS_BY_TIMEFRAME[RECENT_BAND_SECONDS];
+  if (timeframe > RECENT_BAND_SECONDS && minPoints > bandMinPoints) {
+    queries.push({ since: now - RECENT_BAND_SECONDS, minPoints: bandMinPoints });
+  }
+  return queries;
+}
+
+async function fetchWindow({ since, minPoints }) {
+  const numericFilters = encodeURIComponent(`created_at_i>${since},points>=${minPoints}`);
+  const base = `https://hn.algolia.com/api/v1/search_by_date?tags=story&numericFilters=${numericFilters}&hitsPerPage=${API_HITS_PER_PAGE}`;
   const first = await (await fetch(`${base}&page=0`)).json();
   const pageCount = Math.min(Number(first.nbPages || 1), MAX_API_PAGES);
   const rest = await Promise.all(
     Array.from({ length: Math.max(0, pageCount - 1) }, (_, i) => fetch(`${base}&page=${i + 1}`).then(r => r.json()))
   );
-  const hits = [first, ...rest].flatMap(p => p.hits ?? []);
-  const unique = [...new Map(hits.map(h => [String(h.objectID), h])).values()];
   return {
     minPoints,
-    nbHits: first.nbHits,
-    truncated: Number(first.nbPages || 0) > MAX_API_PAGES,
+    nbHits: Number(first.nbHits || 0),
+    truncated: Number(first.nbHits || 0) > HIT_CAP,
+    hits: [first, ...rest].flatMap(p => p.hits ?? [])
+  };
+}
+
+async function load(timeframe) {
+  const results = await Promise.all(windowQueries(timeframe).map(fetchWindow));
+  const hits = results.flatMap(r => r.hits);
+  const unique = [...new Map(hits.map(h => [String(h.objectID), h])).values()];
+  return {
+    minPoints: results.map(r => r.minPoints).join(' + '),
+    nbHits: results.map(r => r.nbHits).join(' + '),
+    truncated: results.some(r => r.truncated),
     scored: unique.map(s => ({ ...s, ember: emberScore(s, now, EMBER_DEFAULTS) }))
   };
 }

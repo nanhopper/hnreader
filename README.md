@@ -57,7 +57,7 @@ The four constants are experiments, not settled truth. Override any of them with
 |---|---|---|---|
 | `emberHeat` | $h$ | `1.2` | Ratio at which comments start counting against a story. Lower is stricter about flamewars. |
 | `emberWeight` | $w$ | `1.5` | How hard the heat penalty bites. `0` disables it. |
-| `emberMaturity` | $m$ | `6` | Accumulation-curve time constant in hours. Lower favours fresh stories more aggressively. |
+| `emberMaturity` | $m$ | `6` | Accumulation-curve time constant in hours. Higher projects young stories further forward, favouring fresh ones more aggressively. |
 | `emberBar` | — | `9.5` | Score needed for the **don't miss** badge. |
 
 ```
@@ -66,7 +66,11 @@ index.html?sort=ember&timeframe=86400&minEmber=9&emberHeat=0.9
 
 ### A note on the API prefilter
 
-The Algolia endpoint returns at most 1,000 hits, newest first, so an unfiltered 30-day query would silently discard everything older than its first thousand results. Each timeframe therefore carries a minimum-points prefilter (24 h → 5, 3 d → 10, 7 d → 20, 30 d → 200) chosen to keep the window under that cap. The floors sit far below anything Ember can rank, so nothing scoreable is lost.
+The Algolia endpoint returns at most 1,000 hits, newest first, so an unfiltered 30-day query would silently discard everything older than its first thousand results. Each timeframe therefore carries a minimum-points prefilter (24 h → 5, 3 d → 10, 7 d → 20, 30 d → 200) chosen to keep the window under that cap.
+
+A high floor would otherwise hide fresh stories that the maturity projection already rates highly — a six-hour-old story on 199 points and 239 comments scores 8.72, clearing the default floor, yet sits below the 30-day prefilter. Any window whose floor exceeds the 24-hour floor therefore issues a second query covering the last 24 hours at the lower floor, and the two result sets are merged and deduplicated before scoring.
+
+Stories that are both old and below their window's floor are still not retrieved; the cap makes some floor unavoidable. If a window ever does exceed 1,000 matches, the status bar says `first 1,000 matches` rather than failing silently.
 
 ### Tests
 
