@@ -21,7 +21,8 @@ const story = (label, points, num_comments, ageHours) => ({
 const cases = [
   story('Deep essay, quiet approval', 600, 180, 20),
   story('Fresh breakout', 180, 60, 4),
-  story('Flamewar', 300, 900, 20),
+  story('Divisive but endorsed', 300, 900, 20),
+  story('Pile-on, little approval', 60, 500, 20),
   story('Dull but upvoted', 120, 30, 22),
   story('Genuine megathread', 1500, 1200, 20),
   story('Brand new, no traction', 5, 1, 0.2)
@@ -45,9 +46,10 @@ const order = scored.map(s => s.label);
 const expected = [
   'Genuine megathread',
   'Deep essay, quiet approval',
+  'Divisive but endorsed',
   'Fresh breakout',
-  'Flamewar',
   'Dull but upvoted',
+  'Pile-on, little approval',
   'Brand new, no traction'
 ];
 const ok = order.every((label, index) => label === expected[index]);
@@ -59,5 +61,22 @@ const morePoints = emberScore({ ...base, points: 500 }, now, EMBER_DEFAULTS) > e
 const younger = emberScore({ ...base, created_at_i: now - 5 * 3600 }, now, EMBER_DEFAULTS) > emberScore(base, now, EMBER_DEFAULTS);
 const flameHurts = emberScore({ ...base, num_comments: 2000 }, now, EMBER_DEFAULTS) < emberScore({ ...base, num_comments: 480 }, now, EMBER_DEFAULTS);
 const finite = Number.isFinite(emberScore({ points: 0, num_comments: 0, created_at_i: now }, now, EMBER_DEFAULTS));
-console.log({ morePoints, younger, flameHurts, finite });
-process.exit(ok && morePoints && younger && flameHurts && finite ? 0 : 1);
+
+// Endorsement damping: at the same ratio, a story many people upvoted should
+// keep less of the heat penalty than one almost nobody did.
+const penaltyOf = (points, num_comments) => {
+  const s = { points, num_comments, created_at_i: now - 20 * 3600 };
+  return emberScore(s, now, { ...EMBER_DEFAULTS, weight: 0 }) - emberScore(s, now, EMBER_DEFAULTS);
+};
+const endorsementForgives = penaltyOf(600, 1800) < penaltyOf(60, 180);
+
+// Regression guard: the inverted-U must survive at every point level. Plain
+// E/(E+P) damping breaks this above ~300 points, where the magnitude term
+// outruns the shrinking penalty and extra comments start helping again.
+const uShapeHolds = [50, 200, 400, 800, 2000, 5000].every(points => {
+  const at = num_comments => emberScore({ points, num_comments, created_at_i: now - 20 * 3600 }, now, EMBER_DEFAULTS);
+  return at(points * 6) < at(points * 2);
+});
+
+console.log({ morePoints, younger, flameHurts, finite, endorsementForgives, uShapeHolds });
+process.exit(ok && morePoints && younger && flameHurts && finite && endorsementForgives && uShapeHolds ? 0 : 1);
