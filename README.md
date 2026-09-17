@@ -1,14 +1,14 @@
-# HN Reader — Comments First
+# HN Reader — The conversations worth catching
 
-A lightweight, single-page Hacker News digest that surfaces the most-discussed threads first. No server, no build step — just a plain HTML file that queries the public [HN Algolia API](https://hn.algolia.com/api).
+A lightweight, single-page Hacker News digest that surfaces the few threads worth your time. No server, no build step — just a plain HTML file that queries the public [HN Algolia API](https://hn.algolia.com/api).
 
 ## Why not just read the front page?
 
-The HN front page ranks stories by a points/time decay formula, and raw sorts have their own blind spots: points alone miss the thread worth reading, comments alone reward flamewars, and both systematically hide anything posted in the last few hours. This app lets you filter by timeframe and discussion size, then rank by **Ember**, **most commented**, **most points**, or **most recent**.
+The HN front page ranks stories by a points/time decay formula, and raw sorts have their own blind spots: points alone miss the thread worth reading, comments alone reward flamewars, and both systematically hide anything posted in the last few hours. This app lets you filter by timeframe and by an absolute quality floor, then rank by **Ember**, **most commented**, **most points**, or **most recent**.
 
 ## Features
 
-- 🔥 **Ember** — an absolute score that ranks the few stories you shouldn't miss today
+- 💎 **Ember** — an absolute score that ranks the few stories you shouldn't miss today
 - 🔎 Find and rank HN stories over 24 h / 3 d / 7 d / 30 d windows
 - ⏱️ Trim the list to the time you actually have with a minimum-Ember threshold
 - 🔗 Open the original submission from its headline or jump straight to the HN comments
