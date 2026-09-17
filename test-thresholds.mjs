@@ -6,8 +6,21 @@ const grab = name => {
   return html.slice(start, html.indexOf('\n    }\n', start) + 7);
 };
 const constants = html.slice(html.indexOf('const EMBER_DEFAULTS'), html.indexOf('const state ='));
-const { emberScore, EMBER_DEFAULTS, MIN_POINTS_BY_TIMEFRAME, DEFAULT_MIN_POINTS } = new Function(
-  `${constants}\n${grab('emberScore')}\nreturn { emberScore, EMBER_DEFAULTS, MIN_POINTS_BY_TIMEFRAME, DEFAULT_MIN_POINTS };`
+const {
+  emberScore,
+  EMBER_DEFAULTS,
+  MIN_POINTS_BY_TIMEFRAME,
+  DEFAULT_MIN_POINTS,
+  RECENT_BAND_SECONDS,
+  LOW_FLOOR_RESCUE_TIMEFRAME_SECONDS,
+  LOW_FLOOR_RESCUE_SECONDS,
+  LOW_FLOOR_RESCUE_MIN_POINTS,
+  LOW_FLOOR_RESCUE_MAX_EMBER
+} = new Function(
+  `${constants}\n${grab('emberScore')}\n`
+  + 'return { emberScore, EMBER_DEFAULTS, MIN_POINTS_BY_TIMEFRAME, DEFAULT_MIN_POINTS, '
+  + 'RECENT_BAND_SECONDS, LOW_FLOOR_RESCUE_TIMEFRAME_SECONDS, LOW_FLOOR_RESCUE_SECONDS, '
+  + 'LOW_FLOOR_RESCUE_MIN_POINTS, LOW_FLOOR_RESCUE_MAX_EMBER };'
 )();
 
 const MAX_API_PAGES = 10;
@@ -20,8 +33,6 @@ const commentThresholds = [100, 200, 500, 1000];
 const AUDIT_EMBER_FLOOR = 8.5;
 
 // Mirrors fetchStories: same prefilter, same recent band, same paging, same scoring.
-const RECENT_BAND_SECONDS = 86400;
-
 function windowQueries(filters) {
   const { timeframe } = filters;
   const minPoints = MIN_POINTS_BY_TIMEFRAME[timeframe] ?? DEFAULT_MIN_POINTS;
@@ -29,6 +40,14 @@ function windowQueries(filters) {
   const bandMinPoints = MIN_POINTS_BY_TIMEFRAME[RECENT_BAND_SECONDS];
   if (timeframe > RECENT_BAND_SECONDS && minPoints > bandMinPoints) {
     queries.push({ since: now - RECENT_BAND_SECONDS, minPoints: bandMinPoints });
+  }
+  if (filters.mode === 'ember'
+    && timeframe === LOW_FLOOR_RESCUE_TIMEFRAME_SECONDS
+    && filters.minEmber <= LOW_FLOOR_RESCUE_MAX_EMBER) {
+    queries.push({
+      since: now - LOW_FLOOR_RESCUE_SECONDS,
+      minPoints: LOW_FLOOR_RESCUE_MIN_POINTS
+    });
   }
   if (filters.mode === 'comments' && filters.minComments > 0) {
     queries.push({ since: now - timeframe, minComments: filters.minComments });
@@ -57,7 +76,7 @@ async function fetchWindow(query) {
 }
 
 async function load(timeframe) {
-  const results = await Promise.all(windowQueries({ timeframe, mode: 'ember' }).map(fetchWindow));
+  const results = await Promise.all(windowQueries({ timeframe, mode: 'ember', minEmber: 0 }).map(fetchWindow));
   const hits = results.flatMap(r => r.hits);
   const unique = [...new Map(hits.map(h => [String(h.objectID), h])).values()];
   return {
@@ -70,6 +89,22 @@ async function load(timeframe) {
 
 const rows = [];
 let failures = [];
+const rescueQueries = windowQueries({
+  timeframe: LOW_FLOOR_RESCUE_TIMEFRAME_SECONDS,
+  mode: 'ember',
+  minEmber: LOW_FLOOR_RESCUE_MAX_EMBER
+});
+if (!rescueQueries.some(query => query.minPoints === LOW_FLOOR_RESCUE_MIN_POINTS)) {
+  failures.push('30d/7.5 Ember mode is missing its bounded low-floor rescue query');
+}
+const strictQueries = windowQueries({
+  timeframe: LOW_FLOOR_RESCUE_TIMEFRAME_SECONDS,
+  mode: 'ember',
+  minEmber: 8.5
+});
+if (strictQueries.some(query => query.minPoints === LOW_FLOOR_RESCUE_MIN_POINTS)) {
+  failures.push('30d strict Ember mode runs the unnecessary low-floor rescue query');
+}
 for (const [label, timeframe] of Object.entries(timeframes)) {
   const { minPoints, nbHits, truncated, scored } = await load(timeframe);
   const row = { window: label, 'points>=': minPoints, nbHits, truncated: truncated ? 'YES' : 'no' };
@@ -88,7 +123,7 @@ console.table(rows);
 const auditRows = [];
 for (const [label, timeframe] of Object.entries(timeframes)) {
   for (const minComments of commentThresholds) {
-    const queries = windowQueries({ timeframe, mode: 'comments', minComments });
+    const queries = windowQueries({ timeframe, mode: 'comments', minComments, minEmber: AUDIT_EMBER_FLOOR });
     const results = await Promise.all(queries.map(fetchWindow));
     const commentQuery = results.find(r => r.bound.startsWith('num_comments'));
     const unique = [...new Map(results.flatMap(r => r.hits).map(h => [String(h.objectID), h])).values()];

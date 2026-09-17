@@ -9,13 +9,19 @@ const grab = name => {
 };
 const constants = html.slice(html.indexOf('const EMBER_DEFAULTS'), html.indexOf('const state ='));
 
-const { emberScore, EMBER_DEFAULTS } = new Function(
-  `${constants}\n${grab('emberScore')}\nreturn { emberScore, EMBER_DEFAULTS };`
+const {
+  emberScore,
+  buildMissExport,
+  EMBER_DEFAULTS,
+  EMBER_LIMITS
+} = new Function(
+  `${constants}\n${grab('emberScore')}\n${grab('buildMissExport')}\n`
+  + 'return { emberScore, buildMissExport, EMBER_DEFAULTS, EMBER_LIMITS };'
 )();
 
 const now = Math.floor(Date.now() / 1000);
 const story = (label, points, num_comments, ageHours) => ({
-  label, points, num_comments, created_at_i: now - ageHours * 3600, ageHours
+  label, title: label, points, num_comments, created_at_i: now - ageHours * 3600, ageHours
 });
 
 const cases = [
@@ -78,5 +84,62 @@ const uShapeHolds = [50, 200, 400, 800, 2000, 5000].every(points => {
   return at(points * 6) < at(points * 2);
 });
 
-console.log({ morePoints, younger, flameHurts, finite, endorsementForgives, uShapeHolds });
-process.exit(ok && morePoints && younger && flameHurts && finite && endorsementForgives && uShapeHolds ? 0 : 1);
+// Every selectable weight must preserve the post-threshold decline, not just
+// the default. This guards the relationship between the weight and damping
+// floors that makes the inverted-U hold for highly endorsed stories.
+const allowedWeightsHold = [EMBER_LIMITS.weight[0], EMBER_DEFAULTS.weight, EMBER_LIMITS.weight[1]]
+  .every(weight => [50, 200, 400, 800, 2000, 5000].every(points => {
+    const config = { ...EMBER_DEFAULTS, weight };
+    const at = num_comments => emberScore({ points, num_comments, created_at_i: now - 20 * 3600 }, now, config);
+    return at(points * 6) < at(points * 2);
+  }));
+
+// Ask HN is intentionally participatory. It gets a higher expected discussion
+// baseline, while sufficiently extreme ratios must still lower its score.
+const askBase = { title: 'Ask HN: What are you working on?', points: 372, num_comments: 1179, created_at_i: now - 87 * 3600 };
+const genericBase = { ...askBase, title: 'A regular submission' };
+const askScore = emberScore(askBase, now, EMBER_DEFAULTS);
+const genericScore = emberScore(genericBase, now, EMBER_DEFAULTS);
+const askGetsParticipatoryBaseline = askScore > genericScore;
+const askClearsReadingFloor = askScore >= 8.5 && genericScore < 8.5;
+const askHeatStillBites = emberScore({ ...askBase, num_comments: askBase.points * 8 }, now, EMBER_DEFAULTS)
+  < emberScore({ ...askBase, num_comments: askBase.points * 3 }, now, EMBER_DEFAULTS);
+
+const missExport = buildMissExport({
+  version: 1,
+  misses: {
+    42: { objectID: '42', title: 'A missed story', ember: 8.4 }
+  }
+}, now, EMBER_DEFAULTS);
+const missExportWorks = missExport.schema_version === 1
+  && missExport.objective === 'threads a reader would regret missing'
+  && missExport.exported_at === now
+  && missExport.misses.length === 1
+  && missExport.misses[0].objectID === '42'
+  && missExport.active_config.heat === EMBER_DEFAULTS.heat;
+
+console.log({
+  morePoints,
+  younger,
+  flameHurts,
+  finite,
+  endorsementForgives,
+  uShapeHolds,
+  allowedWeightsHold,
+  askGetsParticipatoryBaseline,
+  askClearsReadingFloor,
+  askHeatStillBites,
+  missExportWorks
+});
+process.exit(ok
+  && morePoints
+  && younger
+  && flameHurts
+  && finite
+  && endorsementForgives
+  && uShapeHolds
+  && allowedWeightsHold
+  && askGetsParticipatoryBaseline
+  && askClearsReadingFloor
+  && askHeatStillBites
+  && missExportWorks ? 0 : 1);

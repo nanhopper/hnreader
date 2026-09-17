@@ -362,6 +362,20 @@
 
     .param-footer .formula-note { flex: 1 1 260px; }
 
+    .miss-tools {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      margin-top: 12px;
+    }
+
+    .miss-summary {
+      flex: 1 1 260px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
     /* Parameter names are long enough that two columns stop working early. */
     @media (max-width: 620px) {
       .formula-terms { grid-template-columns: 1fr; }
@@ -734,6 +748,25 @@
 
     .article-action:hover { border-color: var(--border-strong); }
 
+    .miss-toggle {
+      min-height: 32px;
+      padding: 5px 9px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      cursor: pointer;
+    }
+
+    .miss-toggle:hover { border-color: var(--border-strong); color: var(--text); }
+
+    .miss-toggle[aria-pressed="true"] {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
     .read-toggle {
       min-height: 38px;
       margin-left: auto;
@@ -818,6 +851,7 @@
       .story-card { padding: 15px; }
       .action-bar { flex-wrap: wrap; }
       .story-action { flex: 1; }
+      .miss-toggle { width: 100%; margin-left: 0; }
       .read-toggle { width: 100%; margin-left: 0; }
     }
 
@@ -843,7 +877,7 @@
     <details class="formula-panel">
       <summary class="formula-toggle"><svg class="formula-chevron" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><path d="M5.5 2.5 11 8l-5.5 5.5-1.4-1.4L8.2 8 4.1 3.9z" /></svg>How Ember works</summary>
       <div class="formula-body">
-        <p>Ember estimates how much attention a story will end up deserving, then subtracts what looks like noise rather than interest. Scores are absolute and logarithmic: the same number means the same thing in every timeframe, and each <b>+1</b> is roughly 2.7&#215; the reception.</p>
+        <p>Ember estimates how much attention a story will end up deserving, then subtracts what looks like noise rather than interest. Scores are absolute and logarithmic: the same number means the same thing in every timeframe. Before penalties, each <b>+1</b> is an e-fold increase in the weighted reception index; when points and comments grow together, that is roughly 1.95&#215; both.</p>
 
         <div class="formula-stack">
           <div class="formula-headline">
@@ -871,7 +905,7 @@
                   <mi>heat</mi><mo>=</mo>
                   <mi class="param">emberWeight</mi><mo>&#8901;</mo><mi>damping</mi><mo>&#8901;</mo>
                   <mi>max</mi><mo>(</mo><mn>0</mn><mo>,</mo>
-                  <mi>ln</mi><mo>(</mo><mfrac><mi>ratio</mi><mi class="param">emberHeat</mi></mfrac><mo>)</mo><mo>)</mo>
+                  <mi>ln</mi><mo>(</mo><mfrac><mi>ratio</mi><mrow><mi>heat threshold</mi></mrow></mfrac><mo>)</mo><mo>)</mo>
                 </mrow>
               </math>
 
@@ -905,10 +939,24 @@
 
               <math display="block">
                 <mrow>
+                  <mi>heat threshold</mi><mo>=</mo><mi class="param">emberHeat</mi><mo>&#8901;</mo>
+                  <mi>type factor</mi>
+                </mrow>
+              </math>
+
+              <math display="block">
+                <mrow>
+                  <mi>type factor</mi><mo>=</mo><mn>1.75</mn><mtext>&#160;for Ask HN,&#160;</mtext>
+                  <mn>1</mn><mtext>&#160;otherwise</mtext>
+                </mrow>
+              </math>
+
+              <math display="block">
+                <mrow>
                   <mi>damping</mi><mo>=</mo>
                   <mi>max</mi><mo>(</mo>
                   <mfrac><mi class="param">emberEndorsement</mi><mrow><mi class="param">emberEndorsement</mi><mo>+</mo><mi>points</mi></mrow></mfrac>
-                  <mo>,</mo><mn>0.4</mn><mo>)</mo>
+                  <mo>,</mo><mn>0.5</mn><mo>)</mo>
                 </mrow>
               </math>
             </div>
@@ -923,8 +971,9 @@
           <dt>heat</dt><dd>What gets subtracted for arguing.</dd>
           <dt>staleness</dt><dd>A slow decay that starts after 24 hours.</dd>
           <dt class="sub">maturity</dt><dd class="sub">How much of its final reception the story has likely collected. Dividing by it projects a young story forward, so a breakout surfaces hours earlier instead of losing on raw counts. Floored at 0.2 so a minutes-old story cannot explode.</dd>
-          <dt class="sub">ratio</dt><dd class="sub">Comments per point. Past <span class="param">emberHeat</span> it starts to indicate argument rather than depth.</dd>
-          <dt class="sub">damping</dt><dd class="sub">A high ratio only means pile-on while few people have endorsed the story. Once many have, the same ratio describes a widely approved but divisive piece, so the penalty shrinks. Floored at 0.4, below which the penalty stops outweighing the comment term and heat would start helping instead.</dd>
+          <dt class="sub">ratio</dt><dd class="sub">Comments per point. Past the heat threshold it starts to indicate argument rather than depth.</dd>
+          <dt class="sub">heat threshold</dt><dd class="sub">The expected discussion ratio. Ask HN uses a 1.75&#215; baseline because participation is the format rather than evidence of a pile-on.</dd>
+          <dt class="sub">damping</dt><dd class="sub">A high ratio only means pile-on while few people have endorsed the story. Once many have, the same ratio describes a widely approved but divisive piece, so the penalty shrinks. Floored at 0.5 so endorsement can forgive at most half the penalty and extra heat still lowers the score.</dd>
           <dt class="sub">points, comments</dt><dd class="sub">What the story has collected so far.</dd>
           <dt class="sub">age</dt><dd class="sub">Hours since it was posted.</dd>
         </dl>
@@ -945,7 +994,7 @@
               <output class="param-value" id="formula-heat" for="slider-heat"></output>
             </div>
             <input class="param-slider" id="slider-heat" data-ember="heat" type="range" min="0" max="1000" step="1" />
-            <p class="param-desc">Ratio at which comments start counting against a story. Lower is stricter about flamewars.</p>
+            <p class="param-desc">Base ratio at which comments start counting against a story. Ask HN gets a higher participatory baseline.</p>
           </div>
           <div class="param-row">
             <div class="param-head">
@@ -953,7 +1002,7 @@
               <output class="param-value" id="formula-weight" for="slider-weight"></output>
             </div>
             <input class="param-slider" id="slider-weight" data-ember="weight" type="range" min="0" max="1000" step="1" />
-            <p class="param-desc">How hard the heat penalty bites. 0 disables it.</p>
+            <p class="param-desc">How hard the heat penalty bites. The minimum preserves a declining score after the threshold.</p>
           </div>
           <div class="param-row">
             <div class="param-head">
@@ -961,7 +1010,7 @@
               <output class="param-value" id="formula-endorsement" for="slider-endorsement"></output>
             </div>
             <input class="param-slider" id="slider-endorsement" data-ember="endorsement" type="range" min="0" max="1000" step="1" />
-            <p class="param-desc">Points at which half the heat penalty is forgiven.</p>
+            <p class="param-desc">Points at which endorsement reaches its maximum half-penalty forgiveness.</p>
           </div>
           <div class="param-row">
             <div class="param-head">
@@ -976,6 +1025,10 @@
         <div class="param-footer">
           <button class="param-reset" id="param-reset" type="button">Reset to defaults</button>
           <span class="formula-note">Applied on release, and written to the URL so a tuned setup stays shareable. The bare numbers in the formula are fixed. Comments mode shows you what these settings are leaving out.</span>
+        </div>
+        <div class="miss-tools">
+          <button class="param-reset" id="miss-share" type="button">Share marked misses</button>
+          <span class="miss-summary" id="miss-summary">Mark hidden stories in Comments mode, then share a small JSON file when convenient.</span>
         </div>
       </div>
     </details>
@@ -1057,6 +1110,7 @@
     const FILTER_KEY = 'hn_reader_filters';
     const THEME_KEY = 'hn_reader_theme';
     const EMBER_KEY = 'hn_reader_ember';
+    const EMBER_MISSES_KEY = 'hn_reader_ember_misses_v1';
     const PAGE_SIZE = 25;
     const MAX_API_PAGES = 10;
     const API_HITS_PER_PAGE = 100;
@@ -1064,9 +1118,10 @@
     // Ember: log-magnitude of a story's reception, discounted when the
     // comment-to-point ratio says "argument" rather than "substance", and
     // projected forward so young stories compete fairly with mature ones.
-    // The scale is absolute and logarithmic: +1 is roughly 2.7x the reception.
+    // The scale is absolute and logarithmic: +1 is an e-fold increase in the
+    // weighted reception index before heat and staleness penalties.
     const EMBER_DEFAULTS = { heat: 1.2, weight: 1.5, maturity: 6, endorsement: 150, bar: 9.5 };
-    const EMBER_LIMITS = { heat: [0.05, 20], weight: [0, 6], maturity: [0.5, 72], endorsement: [1, 10000], bar: [0, 20] };
+    const EMBER_LIMITS = { heat: [0.05, 20], weight: [1.5, 6], maturity: [0.5, 72], endorsement: [1, 10000], bar: [0, 20] };
     // Slider geometry. Ranges that span orders of magnitude are mapped
     // logarithmically, otherwise the default sits in the first few percent of
     // the track and the useful region is unreachable.
@@ -1080,21 +1135,29 @@
     };
     const EMBER_COMMENT_WEIGHT = 0.5;
     const EMBER_MATURITY_FLOOR = 0.2;
+    const EMBER_ASK_HN_HEAT_MULTIPLIER = 1.75;
     // Endorsement damping never falls below this. The magnitude term already
     // adds EMBER_COMMENT_WEIGHT per log-unit of comments, so once the damped
     // penalty slope drops under that, extra comments start helping again and
     // the inverted-U collapses into the flamewar-rewards-you behaviour Ember
-    // exists to prevent. The floor keeps weight * damping above 0.5.
-    const EMBER_ENDORSEMENT_FLOOR = 0.4;
+    // exists to prevent. Together with the minimum weight, this floor keeps
+    // weight * damping above 0.5 and caps endorsement forgiveness at half.
+    const EMBER_ENDORSEMENT_FLOOR = 0.5;
     const EMBER_STALENESS_WEIGHT = 0.25;
     const EMBER_STALENESS_GRACE_HOURS = 24;
 
     // The API returns at most 1,000 hits, newest first, so an unfiltered long
     // window would silently drop its older half. These floors keep every
-    // window under that cap; they sit far below anything Ember can rank.
+    // window under that cap. Lower rescue bands cover scores that can clear
+    // selectable Ember floors beneath a long window's primary points bound.
     const MIN_POINTS_BY_TIMEFRAME = { 86400: 5, 259200: 10, 604800: 20, 2592000: 200 };
     const DEFAULT_MIN_POINTS = 20;
     const RECENT_BAND_SECONDS = 86400;
+    const LOW_FLOOR_RESCUE_TIMEFRAME_SECONDS = 2592000;
+    const LOW_FLOOR_RESCUE_SECONDS = 864000;
+    const LOW_FLOOR_RESCUE_MIN_POINTS = 100;
+    const LOW_FLOOR_RESCUE_MAX_EMBER = 7.5;
+    const EMBER_MISSES_SCHEMA_VERSION = 1;
 
     const state = {
       stories: [],
@@ -1104,7 +1167,8 @@
       hits: [],
       requestId: 0,
       controller: null,
-      ember: { ...EMBER_DEFAULTS }
+      ember: { ...EMBER_DEFAULTS },
+      missShareError: ''
     };
 
     const elements = {
@@ -1118,6 +1182,8 @@
       groupEmber: document.getElementById('group-ember'),
       groupComments: document.getElementById('group-comments'),
       paramReset: document.getElementById('param-reset'),
+      missShare: document.getElementById('miss-share'),
+      missSummary: document.getElementById('miss-summary'),
       emberMark: document.getElementById('ember-mark-template')
     };
 
@@ -1194,6 +1260,121 @@
       }
     }
 
+    function readMissStore() {
+      const stored = readStoredObject(EMBER_MISSES_KEY);
+      return stored.version === EMBER_MISSES_SCHEMA_VERSION
+        && stored.misses && typeof stored.misses === 'object'
+        ? stored
+        : { version: EMBER_MISSES_SCHEMA_VERSION, misses: {} };
+    }
+
+    function writeMissStore(store) {
+      try {
+        localStorage.setItem(EMBER_MISSES_KEY, JSON.stringify(store));
+        return true;
+      } catch (error) {
+        state.missShareError = 'Marked misses could not be saved in this browser.';
+        console.error(state.missShareError, error);
+        syncMissTools();
+        return false;
+      }
+    }
+
+    function buildMissExport(store, exportedAt, activeConfig) {
+      return {
+        schema_version: EMBER_MISSES_SCHEMA_VERSION,
+        objective: 'threads a reader would regret missing',
+        exported_at: exportedAt,
+        active_config: { ...activeConfig },
+        misses: Object.values(store.misses || {})
+      };
+    }
+
+    function syncMissTools() {
+      const count = Object.keys(readMissStore().misses).length;
+      elements.missShare.disabled = count === 0;
+      elements.missSummary.textContent = state.missShareError
+        || `${count.toLocaleString()} marked ${count === 1 ? 'miss' : 'misses'} stored only in this browser. `
+        + 'Share opens the mobile share sheet when file sharing is supported, otherwise it downloads JSON.';
+    }
+
+    function updateMissButton(id, marked) {
+      const card = elements.list.querySelector(`[data-story-id="${CSS.escape(String(id))}"]`);
+      const button = card?.querySelector('.miss-toggle');
+      if (button) button.setAttribute('aria-pressed', String(marked));
+    }
+
+    function setMissMarked(story, marked) {
+      const id = String(story.objectID);
+      const store = readMissStore();
+      if (marked) {
+        store.misses[id] = {
+          objectID: id,
+          title: String(story.title || ''),
+          author: String(story.author || ''),
+          url: safeArticleUrl(story.url),
+          created_at_i: Number(story.created_at_i) || 0,
+          points: Math.max(0, Number(story.points) || 0),
+          comments: Math.max(0, Number(story.num_comments) || 0),
+          ember: Number(story.ember) || 0,
+          marked_at: Math.floor(Date.now() / 1000),
+          filters: getFilters(),
+          config: { ...state.ember }
+        };
+      } else {
+        delete store.misses[id];
+      }
+      if (!writeMissStore(store)) return;
+      state.missShareError = '';
+      updateMissButton(id, marked);
+      syncMissTools();
+    }
+
+    function downloadMissFile(file) {
+      const url = URL.createObjectURL(file);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.name;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+
+    async function shareMisses() {
+      const payload = buildMissExport(
+        readMissStore(),
+        Math.floor(Date.now() / 1000),
+        state.ember
+      );
+      const file = new File(
+        [JSON.stringify(payload, null, 2)],
+        `hn-reader-ember-misses-${new Date().toISOString().slice(0, 10)}.json`,
+        { type: 'application/json' }
+      );
+
+      try {
+        if (typeof navigator.share === 'function'
+          && typeof navigator.canShare === 'function'
+          && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'HN Reader Ember misses',
+            text: 'Stories I marked as Ember misses.',
+            files: [file]
+          });
+        } else {
+          downloadMissFile(file);
+        }
+        state.missShareError = '';
+        syncMissTools();
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        state.missShareError = 'Marked misses could not be shared.';
+        console.error(state.missShareError, error);
+        syncMissTools();
+      }
+    }
+
     function readEmberConfig() {
       const params = new URLSearchParams(location.search);
       const saved = readStoredObject(EMBER_KEY);
@@ -1225,8 +1406,10 @@
       // describes a widely approved but divisive piece, which is signal. Damp
       // the penalty by how much endorsement the story has actually collected.
       const ratio = (comments + 1) / (points + 1);
+      const isAskHn = /^Ask HN:/i.test(String(story.title || '').trim());
+      const heatThreshold = config.heat * (isAskHn ? EMBER_ASK_HN_HEAT_MULTIPLIER : 1);
       const endorsement = Math.max(config.endorsement / (config.endorsement + points), EMBER_ENDORSEMENT_FLOOR);
-      const heat = config.weight * endorsement * Math.max(0, Math.log(ratio / config.heat));
+      const heat = config.weight * endorsement * Math.max(0, Math.log(ratio / heatThreshold));
 
       const staleness = EMBER_STALENESS_WEIGHT
         * Math.max(0, Math.log(Math.max(ageHours, 1) / EMBER_STALENESS_GRACE_HOURS));
@@ -1333,7 +1516,7 @@
       return link;
     }
 
-    function createStoryCard(story) {
+    function createStoryCard(story, markedMiss) {
       const hnUrl = `https://news.ycombinator.com/item?id=${encodeURIComponent(story.objectID)}`;
       const articleUrl = safeArticleUrl(story.url);
       const titleUrl = articleUrl || hnUrl;
@@ -1380,7 +1563,8 @@
       ember.className = `ember-pill${isFlagged ? ' flagged' : ''}`;
       ember.append(emberMark(), document.createTextNode(isFlagged ? `${score} · don't miss` : score));
       ember.setAttribute('aria-label', isFlagged ? `Ember ${score}, not to miss` : `Ember ${score}`);
-      ember.title = `Ember ${score} on an absolute log scale — every +1 is roughly 2.7x the reception.`
+      ember.title = `Ember ${score} on an absolute log scale — before penalties, +1 is an e-fold`
+        + ` in the weighted reception index, or roughly 1.95x when points and comments grow together.`
         + `\nStories at or above ${state.ember.bar} are flagged as not to miss.`;
       meta.append(ember);
 
@@ -1405,6 +1589,19 @@
         actions.append(readArticle);
       }
 
+      if (story.hiddenByEmber) {
+        const missToggle = document.createElement('button');
+        missToggle.className = 'miss-toggle';
+        missToggle.type = 'button';
+        missToggle.textContent = 'Ember missed this';
+        missToggle.setAttribute('aria-pressed', String(markedMiss));
+        missToggle.title = 'Stores only the story data already shown here. No comments are fetched.';
+        missToggle.addEventListener('click', () => {
+          setMissMarked(story, missToggle.getAttribute('aria-pressed') !== 'true');
+        });
+        actions.append(missToggle);
+      }
+
       const readToggle = document.createElement('button');
       readToggle.className = 'read-toggle';
       readToggle.type = 'button';
@@ -1422,6 +1619,7 @@
     function renderStories() {
       elements.list.replaceChildren();
       const visibleStories = state.stories.slice(0, state.visibleCount);
+      const markedMisses = readMissStore().misses;
 
       if (!visibleStories.length) {
         const empty = document.createElement('section');
@@ -1436,7 +1634,9 @@
       }
 
       const fragment = document.createDocumentFragment();
-      visibleStories.forEach(story => fragment.append(createStoryCard(story)));
+      visibleStories.forEach(story => {
+        fragment.append(createStoryCard(story, Boolean(markedMisses[String(story.objectID)])));
+      });
       elements.list.append(fragment);
 
       if (state.visibleCount < state.stories.length) {
@@ -1556,6 +1756,17 @@
       const bandMinPoints = MIN_POINTS_BY_TIMEFRAME[RECENT_BAND_SECONDS];
       if (timeframe > RECENT_BAND_SECONDS && minPoints > bandMinPoints) {
         queries.push({ since: now - RECENT_BAND_SECONDS, minPoints: bandMinPoints });
+      }
+      // At the selectable 7.5 floor, a 2-10 day-old story can still qualify
+      // below the 30-day window's 200-point cap. A bounded 100-point rescue
+      // band closes that gap without overflowing the API's 1,000-hit limit.
+      if (filters.mode === 'ember'
+        && timeframe === LOW_FLOOR_RESCUE_TIMEFRAME_SECONDS
+        && filters.minEmber <= LOW_FLOOR_RESCUE_MAX_EMBER) {
+        queries.push({
+          since: now - LOW_FLOOR_RESCUE_SECONDS,
+          minPoints: LOW_FLOOR_RESCUE_MIN_POINTS
+        });
       }
       // Comments mode asks a different question, and a heavily discussed story
       // can sit under the points prefilter. Fetch by comment count directly so
@@ -1698,6 +1909,7 @@
       slider.addEventListener('change', () => commitEmberParam(slider));
     });
     elements.paramReset.addEventListener('click', () => applyEmberConfig({ ...EMBER_DEFAULTS }));
+    elements.missShare.addEventListener('click', shareMisses);
     elements.filterToggle.addEventListener('click', () => {
       const isExpanded = elements.filterShell.classList.toggle('is-expanded');
       elements.filterToggle.setAttribute('aria-expanded', String(isExpanded));
@@ -1712,6 +1924,7 @@
 
     applySavedFilters();
     initializeTheme();
+    syncMissTools();
     const siteHeader = document.querySelector('.site-header');
     let stuck = false;
     let stickyFrame = 0;
