@@ -17,6 +17,7 @@
       --accent: #ff7a1a;
       --accent-hover: #ff984d;
       --accent-soft: rgba(255, 122, 26, 0.12);
+      --accent-contrast: #0d1117;
       --text: #c9d1d9;
       --text-muted: #8b949e;
       --heading: #f0f3f6;
@@ -35,6 +36,7 @@
       --accent: #c54b00;
       --accent-hover: #9d3c00;
       --accent-soft: rgba(197, 75, 0, 0.09);
+      --accent-contrast: #ffffff;
       --text: #24292f;
       --text-muted: #57606a;
       --heading: #1f2328;
@@ -67,7 +69,7 @@
       background: var(--surface);
     }
 
-    .header-inner, .filter-inner, .status-bar, main {
+    .header-inner, .filter-inner, .status-bar, main, .formula-panel {
       width: min(calc(100% - 32px), var(--content-width));
       margin-inline: auto;
     }
@@ -127,6 +129,251 @@
 
     .theme-toggle:hover { border-color: var(--border-strong); }
 
+    /* Native <details> supplies the collapse behaviour and MathML renders the
+       formula, so the panel costs no JavaScript and no typesetting library. */
+    .formula-panel { padding-bottom: 20px; }
+
+    .formula-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 13px 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      font-weight: 600;
+      list-style: none;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .formula-toggle::-webkit-details-marker { display: none; }
+    .formula-toggle::marker { content: ''; }
+
+    .formula-toggle:hover {
+      border-color: var(--border-strong);
+      color: var(--text);
+    }
+
+    .formula-toggle:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .formula-chevron {
+      width: 0.8em;
+      height: 0.8em;
+      flex: none;
+      transition: transform 0.15s;
+    }
+
+    .formula-panel[open] .formula-chevron { transform: rotate(90deg); }
+
+    .formula-body {
+      margin-top: 12px;
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface-raised);
+      font-size: 0.85rem;
+      line-height: 1.55;
+    }
+
+    .formula-body p { margin: 0 0 10px; }
+    .formula-body p:last-child { margin-bottom: 0; }
+
+    .formula-stack {
+      margin: 16px 0 14px;
+      overflow-x: auto;
+    }
+
+    /* Three tiers: the score, the three parts it subtracts, and the helpers
+       those parts use. Size and spacing carry the nesting. */
+    .formula-headline {
+      padding: 15px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .formula-headline math { font-size: 1.2rem; }
+
+    .formula-group { margin-top: 18px; }
+    .formula-group-minor { margin-top: 10px; }
+
+    .formula-group-label {
+      margin: 0 0 9px;
+      color: var(--text-muted);
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .formula-rows {
+      display: grid;
+      gap: 11px;
+      padding-left: 12px;
+      border-left: 2px solid var(--border);
+    }
+
+    .formula-rows math { font-size: 0.95rem; }
+    .formula-group-minor .formula-rows math { font-size: 0.85rem; }
+
+    /* Overridable parameters are written by their literal URL name and styled
+       like code, so the formula itself shows you what there is to turn. */
+    .formula-body .param {
+      color: var(--accent);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .formula-stack .param { font-size: 0.86em; }
+
+    .formula-legend {
+      margin: -4px 0 0;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+    }
+
+    .formula-heading {
+      margin: 22px 0 10px;
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .formula-terms {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0 16px;
+      margin: 0;
+      font-size: 0.82rem;
+    }
+
+    .formula-terms > dt,
+    .formula-terms > dd {
+      padding-block: 9px;
+      border-top: 1px solid var(--border);
+    }
+
+    .formula-terms > dt:first-of-type,
+    .formula-terms > dd:first-of-type {
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .formula-terms > dt {
+      color: var(--heading);
+      font-weight: 600;
+    }
+
+    /* Accent is reserved for overridable parameters, per the legend above. */
+    .formula-terms > dt.param { color: var(--accent); }
+
+    .formula-terms > dd {
+      margin: 0;
+      color: var(--text-muted);
+    }
+
+    /* The helpers and raw inputs sit a level below the three parts. */
+    .formula-terms > dt.sub { padding-left: 13px; }
+
+    .param-list {
+      display: grid;
+      gap: 0;
+    }
+
+    .param-row {
+      display: grid;
+      gap: 6px;
+      padding-block: 13px;
+      border-top: 1px solid var(--border);
+    }
+
+    .param-row:first-child { padding-top: 0; border-top: 0; }
+
+    .param-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .param-head label { cursor: pointer; }
+
+    .param-value {
+      color: var(--heading);
+      font-weight: 700;
+      font-size: 0.9rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .param-slider {
+      width: 100%;
+      min-height: 24px;
+      margin: 0;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .param-slider:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
+    }
+
+    .param-desc {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .param-footer {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .param-reset {
+      flex: none;
+      min-height: 32px;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .param-reset:hover:not(:disabled) { border-color: var(--border-strong); }
+
+    .param-reset:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    .param-footer .formula-note { flex: 1 1 260px; }
+
+    /* Parameter names are long enough that two columns stop working early. */
+    @media (max-width: 620px) {
+      .formula-terms { grid-template-columns: 1fr; }
+      .formula-terms > dt { padding-block: 11px 0; }
+      .formula-terms > dd { padding-block: 2px 0; border-top: 0; }
+    }
+
+    .formula-note {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
     .filter-shell {
       position: sticky;
       z-index: 10;
@@ -146,10 +393,37 @@
 
     .filter-inner {
       display: grid;
-      grid-template-columns: 0.75fr 1.05fr 1.2fr;
+      /* Row 1 is the mode switch; row 2 is timeframe + the active threshold. */
+      grid-template-columns: 0.8fr 1.2fr;
       align-items: end;
-      gap: 10px;
+      gap: 12px 10px;
       padding-block: 12px;
+    }
+
+    /* Mode selects which threshold control row 2 shows, so it sits above the
+       controls it governs rather than beside them as a peer. */
+    .mode-group {
+      grid-column: 1 / -1;
+      justify-self: start;
+    }
+
+    .mode-switch {
+      border-radius: 999px;
+      background: var(--surface-raised);
+    }
+
+    .mode-switch .segment-label {
+      min-height: 34px;
+      padding-inline: 18px;
+      font-size: 0.8rem;
+    }
+
+    .mode-switch .segment-label + input + .segment-label { border-left: 0; }
+
+    .mode-switch input:checked + .segment-label {
+      background: var(--accent);
+      color: var(--accent-contrast);
+      box-shadow: none;
     }
 
     .control-group {
@@ -161,6 +435,9 @@
       flex-direction: column;
       gap: 4px;
     }
+
+    /* The author display above outranks the hidden attribute's UA rule. */
+    .control-group[hidden] { display: none; }
 
     .control-group legend {
       padding: 0;
@@ -210,6 +487,27 @@
     .segmented-control input:checked + .segment-label {
       background: var(--accent-soft);
       color: var(--accent);
+      box-shadow: inset 0 -2px var(--accent);
+    }
+
+    /* Timeframe and the thresholds are ordered scales, not arbitrary choices.
+       A tint that deepens left to right reads as ascending value, which the
+       flat mode switch deliberately does not have. The steps are tinted per
+       segment rather than with a smooth gradient, because the choices are
+       discrete -- a continuous fade would blur the boundaries between them. */
+    .segmented-control.ladder { background-color: var(--bg); }
+
+    .ladder .segment-label:nth-of-type(1) { background: color-mix(in srgb, var(--accent) 3%, transparent); }
+    .ladder .segment-label:nth-of-type(2) { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+    .ladder .segment-label:nth-of-type(3) { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+    .ladder .segment-label:nth-of-type(4) { background: color-mix(in srgb, var(--accent) 21%, transparent); }
+    .ladder .segment-label:nth-of-type(5) { background: color-mix(in srgb, var(--accent) 27%, transparent); }
+
+    /* The steps are tinted with the accent too, so selection cannot rely on
+       accent-coloured text alone -- it needs its own fill and an edge marker. */
+    .segmented-control.ladder input:checked + .segment-label {
+      background: color-mix(in srgb, var(--accent) 55%, var(--surface));
+      color: var(--heading);
       box-shadow: inset 0 -2px var(--accent);
     }
 
@@ -390,6 +688,18 @@
       color: var(--accent);
     }
 
+    /* Comments mode: flags what the Ember floor would have kept off the list. */
+    .missed-pill {
+      padding: 1px 8px;
+      border: 1px dashed var(--border);
+      border-radius: 999px;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      font-weight: 650;
+      white-space: nowrap;
+      cursor: help;
+    }
+
     .action-bar {
       display: flex;
       align-items: center;
@@ -530,6 +840,145 @@
       </div>
       <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Use light theme" title="Change theme">☀</button>
     </div>
+    <details class="formula-panel">
+      <summary class="formula-toggle"><svg class="formula-chevron" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><path d="M5.5 2.5 11 8l-5.5 5.5-1.4-1.4L8.2 8 4.1 3.9z" /></svg>How Ember works</summary>
+      <div class="formula-body">
+        <p>Ember estimates how much attention a story will end up deserving, then subtracts what looks like noise rather than interest. Scores are absolute and logarithmic: the same number means the same thing in every timeframe, and each <b>+1</b> is roughly 2.7&#215; the reception.</p>
+
+        <div class="formula-stack">
+          <div class="formula-headline">
+            <math display="block">
+              <mrow>
+                <mi>Ember</mi><mo>=</mo><mi>magnitude</mi><mo>&#8722;</mo><mi>heat</mi><mo>&#8722;</mo><mi>staleness</mi>
+              </mrow>
+            </math>
+          </div>
+
+          <div class="formula-group">
+            <p class="formula-group-label">Where</p>
+            <div class="formula-rows">
+              <math display="block">
+                <mrow>
+                  <mi>magnitude</mi><mo>=</mo>
+                  <mi>ln</mi><mo>(</mo><mfrac><mi>points</mi><mi>maturity</mi></mfrac><mo>+</mo><mn>1</mn><mo>)</mo>
+                  <mo>+</mo><mn>0.5</mn><mo>&#8901;</mo>
+                  <mi>ln</mi><mo>(</mo><mfrac><mi>comments</mi><mi>maturity</mi></mfrac><mo>+</mo><mn>1</mn><mo>)</mo>
+                </mrow>
+              </math>
+
+              <math display="block">
+                <mrow>
+                  <mi>heat</mi><mo>=</mo>
+                  <mi class="param">emberWeight</mi><mo>&#8901;</mo><mi>damping</mi><mo>&#8901;</mo>
+                  <mi>max</mi><mo>(</mo><mn>0</mn><mo>,</mo>
+                  <mi>ln</mi><mo>(</mo><mfrac><mi>ratio</mi><mi class="param">emberHeat</mi></mfrac><mo>)</mo><mo>)</mo>
+                </mrow>
+              </math>
+
+              <math display="block">
+                <mrow>
+                  <mi>staleness</mi><mo>=</mo><mn>0.25</mn><mo>&#8901;</mo>
+                  <mi>max</mi><mo>(</mo><mn>0</mn><mo>,</mo>
+                  <mi>ln</mi><mo>(</mo><mfrac><mi>age</mi><mn>24</mn></mfrac><mo>)</mo><mo>)</mo>
+                </mrow>
+              </math>
+            </div>
+          </div>
+
+          <div class="formula-group formula-group-minor">
+            <div class="formula-rows">
+              <math display="block">
+                <mrow>
+                  <mi>maturity</mi><mo>=</mo>
+                  <mi>max</mi><mo>(</mo><mn>1</mn><mo>&#8722;</mo>
+                  <msup><mi>e</mi><mrow><mo>&#8722;</mo><mfrac><mi>age</mi><mi class="param">emberMaturity</mi></mfrac></mrow></msup>
+                  <mo>,</mo><mn>0.2</mn><mo>)</mo>
+                </mrow>
+              </math>
+
+              <math display="block">
+                <mrow>
+                  <mi>ratio</mi><mo>=</mo>
+                  <mfrac><mrow><mi>comments</mi><mo>+</mo><mn>1</mn></mrow><mrow><mi>points</mi><mo>+</mo><mn>1</mn></mrow></mfrac>
+                </mrow>
+              </math>
+
+              <math display="block">
+                <mrow>
+                  <mi>damping</mi><mo>=</mo>
+                  <mi>max</mi><mo>(</mo>
+                  <mfrac><mi class="param">emberEndorsement</mi><mrow><mi class="param">emberEndorsement</mi><mo>+</mo><mi>points</mi></mrow></mfrac>
+                  <mo>,</mo><mn>0.4</mn><mo>)</mo>
+                </mrow>
+              </math>
+            </div>
+          </div>
+        </div>
+
+        <p class="formula-legend">Names in <span class="param">orange</span> are the parameters you can override. Everything else is either measured from the story or computed above.</p>
+
+        <p class="formula-heading">Terms</p>
+        <dl class="formula-terms">
+          <dt>magnitude</dt><dd>Size of the reception, with comments counting half as much as points.</dd>
+          <dt>heat</dt><dd>What gets subtracted for arguing.</dd>
+          <dt>staleness</dt><dd>A slow decay that starts after 24 hours.</dd>
+          <dt class="sub">maturity</dt><dd class="sub">How much of its final reception the story has likely collected. Dividing by it projects a young story forward, so a breakout surfaces hours earlier instead of losing on raw counts. Floored at 0.2 so a minutes-old story cannot explode.</dd>
+          <dt class="sub">ratio</dt><dd class="sub">Comments per point. Past <span class="param">emberHeat</span> it starts to indicate argument rather than depth.</dd>
+          <dt class="sub">damping</dt><dd class="sub">A high ratio only means pile-on while few people have endorsed the story. Once many have, the same ratio describes a widely approved but divisive piece, so the penalty shrinks. Floored at 0.4, below which the penalty stops outweighing the comment term and heat would start helping instead.</dd>
+          <dt class="sub">points, comments</dt><dd class="sub">What the story has collected so far.</dd>
+          <dt class="sub">age</dt><dd class="sub">Hours since it was posted.</dd>
+        </dl>
+
+        <p class="formula-heading">Parameters</p>
+        <div class="param-list">
+          <div class="param-row">
+            <div class="param-head">
+              <label class="param" for="slider-maturity">emberMaturity</label>
+              <output class="param-value" id="formula-maturity" for="slider-maturity"></output>
+            </div>
+            <input class="param-slider" id="slider-maturity" data-ember="maturity" type="range" min="0" max="1000" step="1" />
+            <p class="param-desc">Accumulation time constant in hours. Higher projects young stories further forward.</p>
+          </div>
+          <div class="param-row">
+            <div class="param-head">
+              <label class="param" for="slider-heat">emberHeat</label>
+              <output class="param-value" id="formula-heat" for="slider-heat"></output>
+            </div>
+            <input class="param-slider" id="slider-heat" data-ember="heat" type="range" min="0" max="1000" step="1" />
+            <p class="param-desc">Ratio at which comments start counting against a story. Lower is stricter about flamewars.</p>
+          </div>
+          <div class="param-row">
+            <div class="param-head">
+              <label class="param" for="slider-weight">emberWeight</label>
+              <output class="param-value" id="formula-weight" for="slider-weight"></output>
+            </div>
+            <input class="param-slider" id="slider-weight" data-ember="weight" type="range" min="0" max="1000" step="1" />
+            <p class="param-desc">How hard the heat penalty bites. 0 disables it.</p>
+          </div>
+          <div class="param-row">
+            <div class="param-head">
+              <label class="param" for="slider-endorsement">emberEndorsement</label>
+              <output class="param-value" id="formula-endorsement" for="slider-endorsement"></output>
+            </div>
+            <input class="param-slider" id="slider-endorsement" data-ember="endorsement" type="range" min="0" max="1000" step="1" />
+            <p class="param-desc">Points at which half the heat penalty is forgiven.</p>
+          </div>
+          <div class="param-row">
+            <div class="param-head">
+              <label class="param" for="slider-bar">emberBar</label>
+              <output class="param-value" id="formula-bar" for="slider-bar"></output>
+            </div>
+            <input class="param-slider" id="slider-bar" data-ember="bar" type="range" min="0" max="1000" step="1" />
+            <p class="param-desc">Score needed for the <b>don't miss</b> badge. Does not affect ranking.</p>
+          </div>
+        </div>
+
+        <div class="param-footer">
+          <button class="param-reset" id="param-reset" type="button">Reset to defaults</button>
+          <span class="formula-note">Applied on release, and written to the URL so a tuned setup stays shareable. The bare numbers in the formula are fixed. Comments mode shows you what these settings are leaving out.</span>
+        </div>
+      </div>
+    </details>
   </header>
 
   <div class="filter-shell">
@@ -538,9 +987,18 @@
       <button class="filter-summary-toggle" id="filter-summary-toggle" type="button" aria-expanded="false" aria-controls="filter-form">Filters</button>
     </div>
     <form class="filter-inner" id="filter-form">
+      <fieldset class="control-group mode-group">
+        <legend>Mode</legend>
+        <div class="segmented-control mode-switch" style="--segments: 2">
+          <input id="mode-ember" name="mode" type="radio" value="ember" />
+          <label class="segment-label" for="mode-ember" title="Maturity-adjusted score that rewards discussion but penalises pile-ons"><svg class="ember-mark" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M9.6 4.6h12.8l6.4 8L16 28.4 3.2 12.6z" opacity=".32" /><path d="M9.6 4.6h12.8l-3.2 8h-6.4z" /><path d="M12.8 12.6 16 28.4l3.2-15.8z" opacity=".8" /></svg>Ember</label>
+          <input id="mode-comments" name="mode" type="radio" value="comments" />
+          <label class="segment-label" for="mode-comments" title="Raw comment count, for auditing what Ember left out">Comments</label>
+        </div>
+      </fieldset>
       <fieldset class="control-group">
         <legend>Timeframe</legend>
-        <div class="segmented-control" style="--segments: 4">
+        <div class="segmented-control ladder" style="--segments: 4">
           <input id="timeframe-24h" name="timeframe" type="radio" value="86400" />
           <label class="segment-label" for="timeframe-24h">24h</label>
           <input id="timeframe-3d" name="timeframe" type="radio" value="259200" />
@@ -551,9 +1009,9 @@
           <label class="segment-label" for="timeframe-30d">30d</label>
         </div>
       </fieldset>
-      <fieldset class="control-group">
+      <fieldset class="control-group" id="group-ember">
         <legend>Minimum Ember</legend>
-        <div class="segmented-control" style="--segments: 5">
+        <div class="segmented-control ladder" style="--segments: 5">
           <input id="ember-0" name="minEmber" type="radio" value="0" />
           <label class="segment-label" for="ember-0">Any</label>
           <input id="ember-75" name="minEmber" type="radio" value="7.5" />
@@ -566,17 +1024,19 @@
           <label class="segment-label" for="ember-95">9.5+</label>
         </div>
       </fieldset>
-      <fieldset class="control-group">
-        <legend>Sort by</legend>
-        <div class="segmented-control" style="--segments: 4">
-          <input id="sort-ember" name="sort" type="radio" value="ember" />
-          <label class="segment-label" for="sort-ember" title="Maturity-adjusted score that rewards discussion but penalises flamewars"><svg class="ember-mark" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M9.6 4.6h12.8l6.4 8L16 28.4 3.2 12.6z" opacity=".32" /><path d="M9.6 4.6h12.8l-3.2 8h-6.4z" /><path d="M12.8 12.6 16 28.4l3.2-15.8z" opacity=".8" /></svg>Ember</label>
-          <input id="sort-comments" name="sort" type="radio" value="comments" />
-          <label class="segment-label" for="sort-comments">Comments</label>
-          <input id="sort-points" name="sort" type="radio" value="points" />
-          <label class="segment-label" for="sort-points">Points</label>
-          <input id="sort-recent" name="sort" type="radio" value="recent" />
-          <label class="segment-label" for="sort-recent">Recent</label>
+      <fieldset class="control-group" id="group-comments" hidden>
+        <legend>Minimum comments</legend>
+        <div class="segmented-control ladder" style="--segments: 5">
+          <input id="comments-0" name="minComments" type="radio" value="0" />
+          <label class="segment-label" for="comments-0">Any</label>
+          <input id="comments-100" name="minComments" type="radio" value="100" />
+          <label class="segment-label" for="comments-100">100+</label>
+          <input id="comments-200" name="minComments" type="radio" value="200" />
+          <label class="segment-label" for="comments-200">200+</label>
+          <input id="comments-500" name="minComments" type="radio" value="500" />
+          <label class="segment-label" for="comments-500">500+</label>
+          <input id="comments-1000" name="minComments" type="radio" value="1000" />
+          <label class="segment-label" for="comments-1000">1000+</label>
         </div>
       </fieldset>
     </form>
@@ -607,6 +1067,17 @@
     // The scale is absolute and logarithmic: +1 is roughly 2.7x the reception.
     const EMBER_DEFAULTS = { heat: 1.2, weight: 1.5, maturity: 6, endorsement: 150, bar: 9.5 };
     const EMBER_LIMITS = { heat: [0.05, 20], weight: [0, 6], maturity: [0.5, 72], endorsement: [1, 10000], bar: [0, 20] };
+    // Slider geometry. Ranges that span orders of magnitude are mapped
+    // logarithmically, otherwise the default sits in the first few percent of
+    // the track and the useful region is unreachable.
+    const EMBER_SLIDER_STEPS = 1000;
+    const EMBER_SLIDERS = {
+      heat: { scale: 'log', decimals: 2 },
+      weight: { scale: 'linear', decimals: 2 },
+      maturity: { scale: 'log', decimals: 1 },
+      endorsement: { scale: 'log', decimals: 0 },
+      bar: { scale: 'linear', decimals: 1 }
+    };
     const EMBER_COMMENT_WEIGHT = 0.5;
     const EMBER_MATURITY_FLOOR = 0.2;
     // Endorsement damping never falls below this. The magnitude term already
@@ -630,6 +1101,7 @@
       visibleCount: PAGE_SIZE,
       isLoading: false,
       isTruncated: false,
+      hits: [],
       requestId: 0,
       controller: null,
       ember: { ...EMBER_DEFAULTS }
@@ -643,11 +1115,70 @@
       status: document.getElementById('status-bar'),
       list: document.getElementById('story-list'),
       theme: document.getElementById('theme-toggle'),
+      groupEmber: document.getElementById('group-ember'),
+      groupComments: document.getElementById('group-comments'),
+      paramReset: document.getElementById('param-reset'),
       emberMark: document.getElementById('ember-mark-template')
     };
 
     function emberMark() {
       return elements.emberMark.content.firstElementChild.cloneNode(true);
+    }
+
+    // The constants are tunable per URL, so the explanation panel reads them
+    // from the active config rather than hardcoding the defaults.
+    function syncFormulaConstants() {
+      Object.keys(EMBER_DEFAULTS).forEach(key => {
+        const slot = document.getElementById(`formula-${key}`);
+        if (slot) slot.textContent = String(state.ember[key]);
+        const slider = document.getElementById(`slider-${key}`);
+        if (slider) slider.value = String(emberToSlider(key, state.ember[key]));
+      });
+      const untouched = Object.keys(EMBER_DEFAULTS)
+        .every(key => state.ember[key] === EMBER_DEFAULTS[key]);
+      elements.paramReset.disabled = untouched;
+    }
+
+    function emberToSlider(key, value) {
+      const [min, max] = EMBER_LIMITS[key];
+      const clamped = Math.min(Math.max(Number(value), min), max);
+      const position = EMBER_SLIDERS[key].scale === 'log'
+        ? Math.log(clamped / min) / Math.log(max / min)
+        : (clamped - min) / (max - min);
+      return Math.round(position * EMBER_SLIDER_STEPS);
+    }
+
+    function sliderToEmber(key, position) {
+      const [min, max] = EMBER_LIMITS[key];
+      const ratio = Math.min(Math.max(Number(position) / EMBER_SLIDER_STEPS, 0), 1);
+      const value = EMBER_SLIDERS[key].scale === 'log'
+        ? min * Math.pow(max / min, ratio)
+        : min + ratio * (max - min);
+      const factor = 10 ** EMBER_SLIDERS[key].decimals;
+      return Math.round(value * factor) / factor;
+    }
+
+    // Dragging only previews the number. Committing on release keeps the URL
+    // and the story list off the critical path of every intermediate value.
+    function previewEmberParam(slider) {
+      const key = slider.dataset.ember;
+      const slot = document.getElementById(`formula-${key}`);
+      if (slot) slot.textContent = String(sliderToEmber(key, slider.value));
+    }
+
+    function commitEmberParam(slider) {
+      const key = slider.dataset.ember;
+      applyEmberConfig({ ...state.ember, [key]: sliderToEmber(key, slider.value) });
+    }
+
+    function applyEmberConfig(config) {
+      state.ember = config;
+      const filters = getFilters();
+      saveFilters(filters);
+      syncFormulaConstants();
+      // Rescoring reuses the hits already in hand; only the score changed.
+      if (state.hits.length) applyResults(filters);
+      else fetchStories();
     }
 
     function emberParamName(key) {
@@ -853,6 +1384,15 @@
         + `\nStories at or above ${state.ember.bar} are flagged as not to miss.`;
       meta.append(ember);
 
+      if (story.hiddenByEmber) {
+        const missed = document.createElement('span');
+        missed.className = 'missed-pill';
+        missed.textContent = 'Ember hid this';
+        missed.title = 'Below your Ember floor, so it would not appear in Ember mode.'
+          + '\nIf it turns out to be worth reading, the score is mistuned.';
+        meta.append(missed);
+      }
+
       const actions = document.createElement('div');
       actions.className = 'action-bar';
       const discuss = makeLink('story-action discuss-action', 'HN comments', hnUrl);
@@ -919,8 +1459,15 @@
       return {
         timeframe: Number(data.get('timeframe')),
         minEmber: Number(data.get('minEmber')),
-        sort: String(data.get('sort'))
+        minComments: Number(data.get('minComments')),
+        mode: String(data.get('mode'))
       };
+    }
+
+    function syncModeControls() {
+      const mode = elements.form.querySelector('input[name="mode"]:checked')?.value || 'ember';
+      elements.groupEmber.hidden = mode !== 'ember';
+      elements.groupComments.hidden = mode !== 'comments';
     }
 
     function selectFilter(name, value, fallback) {
@@ -936,25 +1483,36 @@
     }
 
     function updateFilterSummary() {
+      const mode = elements.form.querySelector('input[name="mode"]:checked')?.value || 'ember';
+      const threshold = mode === 'comments'
+        ? `${selectedFilterLabel('minComments')} comments`
+        : `Ember ${selectedFilterLabel('minEmber')}`;
       elements.filterSummary.textContent = [
         selectedFilterLabel('timeframe'),
-        `Ember ${selectedFilterLabel('minEmber')}`,
-        selectedFilterLabel('sort')
+        threshold,
+        mode === 'comments' ? 'Comments' : 'Ember'
       ].join(' · ');
     }
 
     function applySavedFilters() {
       const saved = readStoredObject(FILTER_KEY);
       const params = new URLSearchParams(location.search);
+      // A pre-mode bookmark or saved state used sort=comments for the same intent.
+      const legacySort = params.get('sort') || saved.sort;
+      const legacyMode = legacySort === 'comments' ? 'comments' : undefined;
       const values = {
         timeframe: params.get('timeframe') || saved.timeframe || '604800',
         minEmber: params.get('minEmber') ?? saved.minEmber ?? '8.5',
-        sort: params.get('sort') || saved.sort || 'ember'
+        minComments: params.get('minComments') ?? saved.minComments ?? '100',
+        mode: params.get('mode') || saved.mode || legacyMode || 'ember'
       };
       selectFilter('timeframe', values.timeframe, '604800');
       selectFilter('minEmber', values.minEmber, '8.5');
-      selectFilter('sort', values.sort, 'ember');
+      selectFilter('minComments', values.minComments, '100');
+      selectFilter('mode', values.mode, 'ember');
       state.ember = readEmberConfig();
+      syncModeControls();
+      syncFormulaConstants();
       updateFilterSummary();
     }
 
@@ -964,21 +1522,20 @@
       const params = new URLSearchParams();
       params.set('timeframe', filters.timeframe);
       params.set('minEmber', filters.minEmber);
-      params.set('sort', filters.sort);
+      params.set('minComments', filters.minComments);
+      params.set('mode', filters.mode);
       Object.keys(EMBER_DEFAULTS).forEach(key => {
         if (state.ember[key] !== EMBER_DEFAULTS[key]) params.set(emberParamName(key), state.ember[key]);
       });
       history.replaceState(null, '', `${location.pathname}?${params}`);
     }
 
-    function sortStories(stories, sortBy) {
+    function sortStories(stories, mode) {
       const comparisons = {
         ember: (a, b) => Number(b.ember || 0) - Number(a.ember || 0),
-        comments: (a, b) => Number(b.num_comments || 0) - Number(a.num_comments || 0),
-        points: (a, b) => Number(b.points || 0) - Number(a.points || 0),
-        recent: (a, b) => Number(b.created_at_i || 0) - Number(a.created_at_i || 0)
+        comments: (a, b) => Number(b.num_comments || 0) - Number(a.num_comments || 0)
       };
-      return stories.sort(comparisons[sortBy] || comparisons.ember);
+      return stories.sort(comparisons[mode] || comparisons.ember);
     }
 
     async function fetchApiPage(baseUrl, page, signal) {
@@ -991,19 +1548,29 @@
     // maturity projection already rates highly, so the recent band is fetched
     // separately at the lower floor its own window would use. Overlapping hits
     // are deduplicated by objectID.
-    function windowQueries(timeframe) {
+    function windowQueries(filters) {
       const now = Math.floor(Date.now() / 1000);
+      const { timeframe } = filters;
       const minPoints = MIN_POINTS_BY_TIMEFRAME[timeframe] ?? DEFAULT_MIN_POINTS;
       const queries = [{ since: now - timeframe, minPoints }];
       const bandMinPoints = MIN_POINTS_BY_TIMEFRAME[RECENT_BAND_SECONDS];
       if (timeframe > RECENT_BAND_SECONDS && minPoints > bandMinPoints) {
         queries.push({ since: now - RECENT_BAND_SECONDS, minPoints: bandMinPoints });
       }
+      // Comments mode asks a different question, and a heavily discussed story
+      // can sit under the points prefilter. Fetch by comment count directly so
+      // the audit list is not silently shaped by the Ember-mode floors.
+      if (filters.mode === 'comments' && filters.minComments > 0) {
+        queries.push({ since: now - timeframe, minComments: filters.minComments });
+      }
       return queries;
     }
 
-    async function fetchWindow({ since, minPoints }, signal) {
-      const numericFilters = encodeURIComponent(`created_at_i>${since},points>=${minPoints}`);
+    async function fetchWindow(query, signal) {
+      const bound = query.minComments === undefined
+        ? `points>=${query.minPoints}`
+        : `num_comments>=${query.minComments}`;
+      const numericFilters = encodeURIComponent(`created_at_i>${query.since},${bound}`);
       const baseUrl = `https://hn.algolia.com/api/v1/search_by_date?tags=story&numericFilters=${numericFilters}&hitsPerPage=${API_HITS_PER_PAGE}`;
       const firstPage = await fetchApiPage(baseUrl, 0, signal);
       const pageCount = Math.min(Number(firstPage.nbPages || 1), MAX_API_PAGES);
@@ -1016,6 +1583,40 @@
         // exceed MAX_API_PAGES. Only nbHits reports the true match count.
         truncated: Number(firstPage.nbHits || 0) > MAX_API_PAGES * API_HITS_PER_PAGE
       };
+    }
+
+    // Scoring is separated from fetching so that tuning a parameter rescores
+    // the hits already in hand instead of re-querying the API.
+    function applyResults(filters) {
+      const isComments = filters.mode === 'comments';
+      state.visibleCount = PAGE_SIZE;
+      const scored = scoreStories(state.hits).filter(story => isComments
+        ? Number(story.num_comments || 0) >= filters.minComments
+        : story.ember >= filters.minEmber);
+      // In comments mode, mark what the Ember floor would have kept out.
+      // That set is the audit list: either Ember missed something, or it
+      // was right to leave it off.
+      state.stories = sortStories(scored, filters.mode).map((story, index) => ({
+        ...story,
+        rank: index + 1,
+        hiddenByEmber: isComments && filters.minEmber > 0 && story.ember < filters.minEmber
+      }));
+
+      const timeframeLabel = selectedFilterLabel('timeframe');
+      const truncation = state.isTruncated ? ' · first 1,000 matches' : '';
+      const count = `${state.stories.length.toLocaleString()} ${state.stories.length === 1 ? 'story' : 'stories'}`;
+      let detail;
+      if (isComments) {
+        const missed = state.stories.filter(story => story.hiddenByEmber).length;
+        const commentLabel = filters.minComments > 0 ? `${filters.minComments}+ comments` : 'any comment count';
+        detail = `${commentLabel}${missed ? ` · ${missed.toLocaleString()} Ember ${filters.minEmber}+ would hide` : ''}`;
+      } else {
+        const flagged = state.stories.filter(story => Number(story.ember) >= state.ember.bar).length;
+        const emberLabel = filters.minEmber > 0 ? `Ember ${filters.minEmber}+` : 'any Ember';
+        detail = `${emberLabel}${flagged ? ` · ${flagged.toLocaleString()} not to miss` : ''}`;
+      }
+      setStatus(`${count} · ${timeframeLabel} · ${detail}${truncation}`);
+      renderStories();
     }
 
     async function fetchStories() {
@@ -1037,24 +1638,13 @@
 
       try {
         const results = await Promise.all(
-          windowQueries(filters.timeframe).map(query => fetchWindow(query, signal))
+          windowQueries(filters).map(query => fetchWindow(query, signal))
         );
         if (requestId !== state.requestId) return;
         const hits = results.flatMap(result => result.hits);
-        const uniqueHits = [...new Map(hits.map(hit => [String(hit.objectID), hit])).values()];
-        const scored = scoreStories(uniqueHits).filter(story => story.ember >= filters.minEmber);
-        state.stories = sortStories(scored, filters.sort).map((story, index) => ({ ...story, rank: index + 1 }));
+        state.hits = [...new Map(hits.map(hit => [String(hit.objectID), hit])).values()];
         state.isTruncated = results.some(result => result.truncated);
-
-        const timeframeLabel = selectedFilterLabel('timeframe');
-        const truncation = state.isTruncated ? ' · first 1,000 matches' : '';
-        const flagged = state.stories.filter(story => Number(story.ember) >= state.ember.bar).length;
-        const mustRead = flagged ? ` · ${flagged.toLocaleString()} not to miss` : '';
-        const emberLabel = filters.minEmber > 0 ? `Ember ${filters.minEmber}+` : 'any Ember';
-        setStatus(
-          `${state.stories.length.toLocaleString()} ${state.stories.length === 1 ? 'story' : 'stories'} · ${timeframeLabel} · ${emberLabel}${mustRead}${truncation}`
-        );
-        renderStories();
+        applyResults(filters);
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') return;
         setStatus('Stories could not be loaded.');
@@ -1096,11 +1686,18 @@
     }
 
     elements.form.addEventListener('change', () => {
+      syncModeControls();
       elements.filterShell.classList.remove('is-expanded');
       elements.filterToggle.setAttribute('aria-expanded', 'false');
       fetchStories();
     });
     elements.form.addEventListener('submit', event => event.preventDefault());
+
+    document.querySelectorAll('.param-slider').forEach(slider => {
+      slider.addEventListener('input', () => previewEmberParam(slider));
+      slider.addEventListener('change', () => commitEmberParam(slider));
+    });
+    elements.paramReset.addEventListener('click', () => applyEmberConfig({ ...EMBER_DEFAULTS }));
     elements.filterToggle.addEventListener('click', () => {
       const isExpanded = elements.filterShell.classList.toggle('is-expanded');
       elements.filterToggle.setAttribute('aria-expanded', String(isExpanded));
