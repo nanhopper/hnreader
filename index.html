@@ -605,10 +605,16 @@
     // comment-to-point ratio says "argument" rather than "substance", and
     // projected forward so young stories compete fairly with mature ones.
     // The scale is absolute and logarithmic: +1 is roughly 2.7x the reception.
-    const EMBER_DEFAULTS = { heat: 1.2, weight: 1.5, maturity: 6, bar: 9.5 };
-    const EMBER_LIMITS = { heat: [0.05, 20], weight: [0, 6], maturity: [0.5, 72], bar: [0, 20] };
+    const EMBER_DEFAULTS = { heat: 1.2, weight: 1.5, maturity: 6, endorsement: 150, bar: 9.5 };
+    const EMBER_LIMITS = { heat: [0.05, 20], weight: [0, 6], maturity: [0.5, 72], endorsement: [1, 10000], bar: [0, 20] };
     const EMBER_COMMENT_WEIGHT = 0.5;
     const EMBER_MATURITY_FLOOR = 0.2;
+    // Endorsement damping never falls below this. The magnitude term already
+    // adds EMBER_COMMENT_WEIGHT per log-unit of comments, so once the damped
+    // penalty slope drops under that, extra comments start helping again and
+    // the inverted-U collapses into the flamewar-rewards-you behaviour Ember
+    // exists to prevent. The floor keeps weight * damping above 0.5.
+    const EMBER_ENDORSEMENT_FLOOR = 0.4;
     const EMBER_STALENESS_WEIGHT = 0.25;
     const EMBER_STALENESS_GRACE_HOURS = 24;
 
@@ -683,9 +689,13 @@
         + EMBER_COMMENT_WEIGHT * Math.log(comments / maturity + 1);
 
       // Discussion is worth something, but past the threshold extra comments
-      // signal repetition rather than depth.
+      // signal repetition rather than depth. That reading only holds while few
+      // people have endorsed the story: once many have, the same ratio
+      // describes a widely approved but divisive piece, which is signal. Damp
+      // the penalty by how much endorsement the story has actually collected.
       const ratio = (comments + 1) / (points + 1);
-      const heat = config.weight * Math.max(0, Math.log(ratio / config.heat));
+      const endorsement = Math.max(config.endorsement / (config.endorsement + points), EMBER_ENDORSEMENT_FLOOR);
+      const heat = config.weight * endorsement * Math.max(0, Math.log(ratio / config.heat));
 
       const staleness = EMBER_STALENESS_WEIGHT
         * Math.max(0, Math.log(Math.max(ageHours, 1) / EMBER_STALENESS_GRACE_HOURS));
