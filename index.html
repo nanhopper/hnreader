@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="dark light" />
-  <title>HN Reader — Comments First</title>
+  <title>HN Reader — The conversations worth catching</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='%23ff7a1a'%3E%3Cpath d='M9.6 4.6h12.8l6.4 8L16 28.4 3.2 12.6z' opacity='.32'/%3E%3Cpath d='M9.6 4.6h12.8l-3.2 8h-6.4z'/%3E%3Cpath d='M12.8 12.6 16 28.4l3.2-15.8z' opacity='.8'/%3E%3C/g%3E%3C/svg%3E" />
   <style>
     :root {
       color-scheme: dark;
@@ -87,7 +88,25 @@
       letter-spacing: -0.03em;
     }
 
-    .brand-mark { color: var(--accent); }
+    .brand-mark {
+      width: 1.05em;
+      height: 1.05em;
+      flex: none;
+      color: var(--accent);
+      vertical-align: -0.12em;
+    }
+
+    .ember-mark {
+      width: 1.1em;
+      height: 1.1em;
+      flex: none;
+    }
+
+    .segment-label .ember-mark {
+      display: inline-block;
+      margin-right: 4px;
+      vertical-align: -0.17em;
+    }
 
     .tagline {
       margin: 4px 0 0;
@@ -127,7 +146,7 @@
 
     .filter-inner {
       display: grid;
-      grid-template-columns: 1.05fr 1fr 1fr;
+      grid-template-columns: 0.75fr 1.05fr 1.2fr;
       align-items: end;
       gap: 10px;
       padding-block: 12px;
@@ -173,10 +192,12 @@
       min-width: 0;
       min-height: 40px;
       padding: 9px 4px;
+      overflow: hidden;
       color: var(--text-muted);
       font-size: 0.78rem;
       font-weight: 600;
       text-align: center;
+      text-overflow: ellipsis;
       white-space: nowrap;
       cursor: pointer;
       transition: background 0.15s, color 0.15s;
@@ -300,7 +321,7 @@
 
     .story-card.read .story-title,
     .story-card.read .story-context,
-    .story-card.read .story-points { opacity: 0.55; }
+    .story-card.read .story-meta { opacity: 0.55; }
 
     .story-context {
       display: flex;
@@ -330,13 +351,6 @@
 
     .story-card.read .read-label { display: inline-block; }
 
-    .story-title-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: start;
-      gap: 16px;
-    }
-
     .story-title {
       color: var(--heading);
       font-size: 1.05rem;
@@ -347,18 +361,33 @@
 
     .story-title:hover { color: var(--accent); }
 
-    .comment-count {
-      color: var(--accent);
-      font-size: 0.86rem;
-      font-weight: 700;
-      line-height: 1.4;
-      white-space: nowrap;
-    }
-
-    .story-points {
+    .story-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
       margin-top: 7px;
       color: var(--text-muted);
       font-size: 0.77rem;
+    }
+
+    .ember-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1px 8px 1px 6px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 650;
+      white-space: nowrap;
+      cursor: help;
+    }
+
+    .ember-pill.flagged {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
     }
 
     .action-bar {
@@ -473,8 +502,6 @@
 
       .filter-inner { grid-template-columns: 1fr; }
       .filter-summary { width: min(calc(100% - 24px), var(--content-width)); }
-      .story-title-row { display: block; }
-      .comment-count { display: inline-block; margin-top: 8px; }
     }
 
     @media (max-width: 440px) {
@@ -498,7 +525,7 @@
   <header class="site-header">
     <div class="header-inner">
       <div>
-        <h1><span class="brand-mark" aria-hidden="true">▲</span> HN Reader</h1>
+        <h1><svg class="brand-mark" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M9.6 4.6h12.8l6.4 8L16 28.4 3.2 12.6z" opacity=".32" /><path d="M9.6 4.6h12.8l-3.2 8h-6.4z" /><path d="M12.8 12.6 16 28.4l3.2-15.8z" opacity=".8" /></svg> HN Reader</h1>
         <p class="tagline">The conversations worth catching</p>
       </div>
       <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Use light theme" title="Change theme">☀</button>
@@ -525,23 +552,25 @@
         </div>
       </fieldset>
       <fieldset class="control-group">
-        <legend>Minimum comments</legend>
+        <legend>Minimum Ember</legend>
         <div class="segmented-control" style="--segments: 5">
-          <input id="comments-0" name="minComments" type="radio" value="0" />
-          <label class="segment-label" for="comments-0">Any</label>
-          <input id="comments-100" name="minComments" type="radio" value="100" />
-          <label class="segment-label" for="comments-100">100+</label>
-          <input id="comments-200" name="minComments" type="radio" value="200" />
-          <label class="segment-label" for="comments-200">200+</label>
-          <input id="comments-500" name="minComments" type="radio" value="500" />
-          <label class="segment-label" for="comments-500">500+</label>
-          <input id="comments-1000" name="minComments" type="radio" value="1000" />
-          <label class="segment-label" for="comments-1000">1000+</label>
+          <input id="ember-0" name="minEmber" type="radio" value="0" />
+          <label class="segment-label" for="ember-0">Any</label>
+          <input id="ember-75" name="minEmber" type="radio" value="7.5" />
+          <label class="segment-label" for="ember-75">7.5+</label>
+          <input id="ember-85" name="minEmber" type="radio" value="8.5" />
+          <label class="segment-label" for="ember-85">8.5+</label>
+          <input id="ember-90" name="minEmber" type="radio" value="9" />
+          <label class="segment-label" for="ember-90">9+</label>
+          <input id="ember-95" name="minEmber" type="radio" value="9.5" />
+          <label class="segment-label" for="ember-95">9.5+</label>
         </div>
       </fieldset>
       <fieldset class="control-group">
         <legend>Sort by</legend>
-        <div class="segmented-control" style="--segments: 3">
+        <div class="segmented-control" style="--segments: 4">
+          <input id="sort-ember" name="sort" type="radio" value="ember" />
+          <label class="segment-label" for="sort-ember" title="Maturity-adjusted score that rewards discussion but penalises flamewars"><svg class="ember-mark" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M9.6 4.6h12.8l6.4 8L16 28.4 3.2 12.6z" opacity=".32" /><path d="M9.6 4.6h12.8l-3.2 8h-6.4z" /><path d="M12.8 12.6 16 28.4l3.2-15.8z" opacity=".8" /></svg>Ember</label>
           <input id="sort-comments" name="sort" type="radio" value="comments" />
           <label class="segment-label" for="sort-comments">Comments</label>
           <input id="sort-points" name="sort" type="radio" value="points" />
@@ -561,12 +590,34 @@
     · Stories from <a href="https://news.ycombinator.com" target="_blank" rel="noopener noreferrer">Hacker News</a>
   </footer>
 
+  <template id="ember-mark-template"><svg class="ember-mark" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M9.6 4.6h12.8l6.4 8L16 28.4 3.2 12.6z" opacity=".32" /><path d="M9.6 4.6h12.8l-3.2 8h-6.4z" /><path d="M12.8 12.6 16 28.4l3.2-15.8z" opacity=".8" /></svg></template>
+
   <script>
     const READ_KEY = 'hn_read_stories';
     const FILTER_KEY = 'hn_reader_filters';
     const THEME_KEY = 'hn_reader_theme';
+    const EMBER_KEY = 'hn_reader_ember';
     const PAGE_SIZE = 25;
     const MAX_API_PAGES = 10;
+    const API_HITS_PER_PAGE = 100;
+
+    // Ember: log-magnitude of a story's reception, discounted when the
+    // comment-to-point ratio says "argument" rather than "substance", and
+    // projected forward so young stories compete fairly with mature ones.
+    // The scale is absolute and logarithmic: +1 is roughly 2.7x the reception.
+    const EMBER_DEFAULTS = { heat: 1.2, weight: 1.5, maturity: 6, bar: 9.5 };
+    const EMBER_LIMITS = { heat: [0.05, 20], weight: [0, 6], maturity: [0.5, 72], bar: [0, 20] };
+    const EMBER_COMMENT_WEIGHT = 0.5;
+    const EMBER_MATURITY_FLOOR = 0.2;
+    const EMBER_STALENESS_WEIGHT = 0.25;
+    const EMBER_STALENESS_GRACE_HOURS = 24;
+
+    // The API returns at most 1,000 hits, newest first, so an unfiltered long
+    // window would silently drop its older half. These floors keep every
+    // window under that cap; they sit far below anything Ember can rank.
+    const MIN_POINTS_BY_TIMEFRAME = { 86400: 5, 259200: 10, 604800: 20, 2592000: 200 };
+    const DEFAULT_MIN_POINTS = 20;
+    const RECENT_BAND_SECONDS = 86400;
 
     const state = {
       stories: [],
@@ -574,7 +625,8 @@
       isLoading: false,
       isTruncated: false,
       requestId: 0,
-      controller: null
+      controller: null,
+      ember: { ...EMBER_DEFAULTS }
     };
 
     const elements = {
@@ -584,8 +636,67 @@
       filterToggle: document.getElementById('filter-summary-toggle'),
       status: document.getElementById('status-bar'),
       list: document.getElementById('story-list'),
-      theme: document.getElementById('theme-toggle')
+      theme: document.getElementById('theme-toggle'),
+      emberMark: document.getElementById('ember-mark-template')
     };
+
+    function emberMark() {
+      return elements.emberMark.content.firstElementChild.cloneNode(true);
+    }
+
+    function emberParamName(key) {
+      return `ember${key[0].toUpperCase()}${key.slice(1)}`;
+    }
+
+    function readStoredObject(key) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key) || '{}');
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function readEmberConfig() {
+      const params = new URLSearchParams(location.search);
+      const saved = readStoredObject(EMBER_KEY);
+      const config = { ...EMBER_DEFAULTS };
+      Object.keys(EMBER_DEFAULTS).forEach(key => {
+        const raw = params.get(emberParamName(key)) ?? saved[key];
+        if (raw === null || raw === undefined || raw === '') return;
+        const value = Number(raw);
+        const [min, max] = EMBER_LIMITS[key];
+        if (Number.isFinite(value) && value >= min && value <= max) config[key] = value;
+      });
+      return config;
+    }
+
+    function emberScore(story, nowSeconds, config) {
+      const points = Math.max(0, Number(story.points) || 0);
+      const comments = Math.max(0, Number(story.num_comments) || 0);
+      const ageHours = Math.max(0, (nowSeconds - (Number(story.created_at_i) || nowSeconds)) / 3600);
+
+      // Votes and comments accrue on a saturating curve, so raw counts censor
+      // anything recent. Divide by the share of that curve already elapsed.
+      const maturity = Math.max(1 - Math.exp(-ageHours / config.maturity), EMBER_MATURITY_FLOOR);
+      const magnitude = Math.log(points / maturity + 1)
+        + EMBER_COMMENT_WEIGHT * Math.log(comments / maturity + 1);
+
+      // Discussion is worth something, but past the threshold extra comments
+      // signal repetition rather than depth.
+      const ratio = (comments + 1) / (points + 1);
+      const heat = config.weight * Math.max(0, Math.log(ratio / config.heat));
+
+      const staleness = EMBER_STALENESS_WEIGHT
+        * Math.max(0, Math.log(Math.max(ageHours, 1) / EMBER_STALENESS_GRACE_HOURS));
+
+      return magnitude - heat - staleness;
+    }
+
+    function scoreStories(stories) {
+      const nowSeconds = Date.now() / 1000;
+      return stories.map(story => ({ ...story, ember: emberScore(story, nowSeconds, state.ember) }));
+    }
 
     function getReadSet() {
       try {
@@ -707,8 +818,6 @@
       readLabel.textContent = 'Read';
       context.append(' ', readLabel);
 
-      const titleRow = document.createElement('div');
-      titleRow.className = 'story-title-row';
       const heading = document.createElement('h2');
       heading.style.margin = '0';
       heading.style.fontSize = 'inherit';
@@ -716,22 +825,32 @@
       title.dataset.readTarget = String(story.objectID);
       heading.append(title);
 
-      const comments = makeLink('comment-count', `${Number(story.num_comments || 0).toLocaleString()} comments`, hnUrl);
-      comments.dataset.readTarget = String(story.objectID);
-      titleRow.append(heading, comments);
+      const meta = document.createElement('div');
+      meta.className = 'story-meta';
+      const commentCount = Number(story.num_comments || 0);
+      appendText(
+        meta,
+        `${Number(story.points || 0).toLocaleString()} points · ${commentCount.toLocaleString()} ${commentCount === 1 ? 'comment' : 'comments'}`
+      );
 
-      const points = document.createElement('div');
-      points.className = 'story-points';
-      points.textContent = `${Number(story.points || 0).toLocaleString()} points`;
+      const isFlagged = Number(story.ember) >= state.ember.bar;
+      const score = Number(story.ember).toFixed(1);
+      const ember = document.createElement('span');
+      ember.className = `ember-pill${isFlagged ? ' flagged' : ''}`;
+      ember.append(emberMark(), document.createTextNode(isFlagged ? `${score} · don't miss` : score));
+      ember.setAttribute('aria-label', isFlagged ? `Ember ${score}, not to miss` : `Ember ${score}`);
+      ember.title = `Ember ${score} on an absolute log scale — every +1 is roughly 2.7x the reception.`
+        + `\nStories at or above ${state.ember.bar} are flagged as not to miss.`;
+      meta.append(ember);
 
       const actions = document.createElement('div');
       actions.className = 'action-bar';
-      const discuss = makeLink('story-action discuss-action', 'Discuss on HN', hnUrl);
+      const discuss = makeLink('story-action discuss-action', 'HN comments', hnUrl);
       discuss.dataset.readTarget = String(story.objectID);
       actions.append(discuss);
 
       if (articleUrl) {
-        const readArticle = makeLink('story-action article-action', 'Read article ↗', articleUrl);
+        const readArticle = makeLink('story-action article-action', 'Submission', articleUrl);
         readArticle.dataset.readTarget = String(story.objectID);
         actions.append(readArticle);
       }
@@ -746,7 +865,7 @@
       });
       actions.append(readToggle);
 
-      article.append(context, titleRow, points, actions);
+      article.append(context, heading, meta, actions);
       return article;
     }
 
@@ -760,7 +879,7 @@
         const heading = document.createElement('h2');
         heading.textContent = 'No conversations found';
         const detail = document.createElement('p');
-        detail.textContent = 'Try a longer timeframe or a lower comment minimum.';
+        detail.textContent = 'Try a longer timeframe or a lower Ember minimum.';
         empty.append(heading, detail);
         elements.list.append(empty);
         return;
@@ -789,7 +908,7 @@
       const data = new FormData(elements.form);
       return {
         timeframe: Number(data.get('timeframe')),
-        minComments: Number(data.get('minComments')),
+        minEmber: Number(data.get('minEmber')),
         sort: String(data.get('sort'))
       };
     }
@@ -809,52 +928,84 @@
     function updateFilterSummary() {
       elements.filterSummary.textContent = [
         selectedFilterLabel('timeframe'),
-        selectedFilterLabel('minComments'),
+        `Ember ${selectedFilterLabel('minEmber')}`,
         selectedFilterLabel('sort')
       ].join(' · ');
     }
 
     function applySavedFilters() {
-      let saved = {};
-      try {
-        saved = JSON.parse(localStorage.getItem(FILTER_KEY) || '{}');
-      } catch {
-        saved = {};
-      }
+      const saved = readStoredObject(FILTER_KEY);
       const params = new URLSearchParams(location.search);
       const values = {
         timeframe: params.get('timeframe') || saved.timeframe || '604800',
-        minComments: params.get('minComments') ?? saved.minComments ?? '100',
-        sort: params.get('sort') || saved.sort || 'comments'
+        minEmber: params.get('minEmber') ?? saved.minEmber ?? '8.5',
+        sort: params.get('sort') || saved.sort || 'ember'
       };
       selectFilter('timeframe', values.timeframe, '604800');
-      selectFilter('minComments', values.minComments, '100');
-      selectFilter('sort', values.sort, 'comments');
+      selectFilter('minEmber', values.minEmber, '8.5');
+      selectFilter('sort', values.sort, 'ember');
+      state.ember = readEmberConfig();
       updateFilterSummary();
     }
 
     function saveFilters(filters) {
       localStorage.setItem(FILTER_KEY, JSON.stringify(filters));
+      localStorage.setItem(EMBER_KEY, JSON.stringify(state.ember));
       const params = new URLSearchParams();
       params.set('timeframe', filters.timeframe);
-      params.set('minComments', filters.minComments);
+      params.set('minEmber', filters.minEmber);
       params.set('sort', filters.sort);
+      Object.keys(EMBER_DEFAULTS).forEach(key => {
+        if (state.ember[key] !== EMBER_DEFAULTS[key]) params.set(emberParamName(key), state.ember[key]);
+      });
       history.replaceState(null, '', `${location.pathname}?${params}`);
     }
 
     function sortStories(stories, sortBy) {
       const comparisons = {
+        ember: (a, b) => Number(b.ember || 0) - Number(a.ember || 0),
         comments: (a, b) => Number(b.num_comments || 0) - Number(a.num_comments || 0),
         points: (a, b) => Number(b.points || 0) - Number(a.points || 0),
         recent: (a, b) => Number(b.created_at_i || 0) - Number(a.created_at_i || 0)
       };
-      return stories.sort(comparisons[sortBy] || comparisons.comments);
+      return stories.sort(comparisons[sortBy] || comparisons.ember);
     }
 
     async function fetchApiPage(baseUrl, page, signal) {
       const response = await fetch(`${baseUrl}&page=${page}`, { signal });
       if (!response.ok) throw new Error(`The news service returned HTTP ${response.status}.`);
       return response.json();
+    }
+
+    // A high floor on a long window would hide fresh stories that Ember's
+    // maturity projection already rates highly, so the recent band is fetched
+    // separately at the lower floor its own window would use. Overlapping hits
+    // are deduplicated by objectID.
+    function windowQueries(timeframe) {
+      const now = Math.floor(Date.now() / 1000);
+      const minPoints = MIN_POINTS_BY_TIMEFRAME[timeframe] ?? DEFAULT_MIN_POINTS;
+      const queries = [{ since: now - timeframe, minPoints }];
+      const bandMinPoints = MIN_POINTS_BY_TIMEFRAME[RECENT_BAND_SECONDS];
+      if (timeframe > RECENT_BAND_SECONDS && minPoints > bandMinPoints) {
+        queries.push({ since: now - RECENT_BAND_SECONDS, minPoints: bandMinPoints });
+      }
+      return queries;
+    }
+
+    async function fetchWindow({ since, minPoints }, signal) {
+      const numericFilters = encodeURIComponent(`created_at_i>${since},points>=${minPoints}`);
+      const baseUrl = `https://hn.algolia.com/api/v1/search_by_date?tags=story&numericFilters=${numericFilters}&hitsPerPage=${API_HITS_PER_PAGE}`;
+      const firstPage = await fetchApiPage(baseUrl, 0, signal);
+      const pageCount = Math.min(Number(firstPage.nbPages || 1), MAX_API_PAGES);
+      const remaining = await Promise.all(
+        Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => fetchApiPage(baseUrl, index + 1, signal))
+      );
+      return {
+        hits: [firstPage, ...remaining].flatMap(page => Array.isArray(page.hits) ? page.hits : []),
+        // nbPages is itself clamped to the 1,000-hit cap, so it can never
+        // exceed MAX_API_PAGES. Only nbHits reports the true match count.
+        truncated: Number(firstPage.nbHits || 0) > MAX_API_PAGES * API_HITS_PER_PAGE
+      };
     }
 
     async function fetchStories() {
@@ -868,10 +1019,6 @@
       const { signal } = state.controller;
       const requestId = ++state.requestId;
 
-      const timestamp = Math.floor(Date.now() / 1000) - filters.timeframe;
-      const numericFilters = encodeURIComponent(`created_at_i>${timestamp},num_comments>=${filters.minComments}`);
-      const baseUrl = `https://hn.algolia.com/api/v1/search_by_date?tags=story&numericFilters=${numericFilters}&hitsPerPage=100`;
-
       state.isLoading = true;
       state.visibleCount = PAGE_SIZE;
       elements.list.setAttribute('aria-busy', 'true');
@@ -879,21 +1026,23 @@
       renderSkeletons();
 
       try {
-        const firstPage = await fetchApiPage(baseUrl, 0, signal);
-        const pageCount = Math.min(Number(firstPage.nbPages || 1), MAX_API_PAGES);
-        const remaining = await Promise.all(
-          Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => fetchApiPage(baseUrl, index + 1, signal))
+        const results = await Promise.all(
+          windowQueries(filters.timeframe).map(query => fetchWindow(query, signal))
         );
         if (requestId !== state.requestId) return;
-        const hits = [firstPage, ...remaining].flatMap(page => Array.isArray(page.hits) ? page.hits : []);
+        const hits = results.flatMap(result => result.hits);
         const uniqueHits = [...new Map(hits.map(hit => [String(hit.objectID), hit])).values()];
-        state.stories = sortStories(uniqueHits, filters.sort).map((story, index) => ({ ...story, rank: index + 1 }));
-        state.isTruncated = Number(firstPage.nbPages || 0) > MAX_API_PAGES;
+        const scored = scoreStories(uniqueHits).filter(story => story.ember >= filters.minEmber);
+        state.stories = sortStories(scored, filters.sort).map((story, index) => ({ ...story, rank: index + 1 }));
+        state.isTruncated = results.some(result => result.truncated);
 
         const timeframeLabel = selectedFilterLabel('timeframe');
         const truncation = state.isTruncated ? ' · first 1,000 matches' : '';
+        const flagged = state.stories.filter(story => Number(story.ember) >= state.ember.bar).length;
+        const mustRead = flagged ? ` · ${flagged.toLocaleString()} not to miss` : '';
+        const emberLabel = filters.minEmber > 0 ? `Ember ${filters.minEmber}+` : 'any Ember';
         setStatus(
-          `${state.stories.length.toLocaleString()} ${state.stories.length === 1 ? 'story' : 'stories'} · ${timeframeLabel} · ${filters.minComments}+ comments${truncation}`
+          `${state.stories.length.toLocaleString()} ${state.stories.length === 1 ? 'story' : 'stories'} · ${timeframeLabel} · ${emberLabel}${mustRead}${truncation}`
         );
         renderStories();
       } catch (error) {
