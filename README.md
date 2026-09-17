@@ -4,11 +4,13 @@ A lightweight, single-page Hacker News digest that surfaces the few threads wort
 
 ## Why not just read the front page?
 
-The HN front page ranks stories by a points/time decay formula, and raw sorts have their own blind spots: points alone miss the thread worth reading, comments alone reward flamewars, and both systematically hide anything posted in the last few hours. This app lets you filter by timeframe and by an absolute quality floor, then rank by **Ember**, **most commented**, **most points**, or **most recent**.
+The HN front page ranks stories by a points/time decay formula, and raw sorts have their own blind spots: points alone miss the thread worth reading, comments alone reward flamewars, and both systematically hide anything posted in the last few hours. This app lets you filter by timeframe and rank by **Ember**, an absolute quality score — with a second **Comments** mode that exists to check Ember's work.
 
 ## Features
 
 - 💎 **Ember** — an absolute score that ranks the few stories you shouldn't miss today
+- 🔬 **Comments mode** — audit Ember by browsing the raw comment thresholds, with everything Ember would have hidden marked
+- 🎛️ **How Ember works** — an in-app panel with the formula, the terms, and a slider per parameter so you can retune the score and watch the list rescore
 - 🔎 Find and rank HN stories over 24 h / 3 d / 7 d / 30 d windows
 - ⏱️ Trim the list to the time you actually have with a minimum-Ember threshold
 - 🔗 Open the original submission from its headline or jump straight to the HN comments
@@ -46,6 +48,29 @@ The $0.4$ floor on $d(P)$ is load-bearing. The magnitude term already contribute
 
 The scale is **absolute and logarithmic**: a score means the same thing in every timeframe, and every $+1$ is roughly $2.7\times$ the reception. Typical values run from 4 to 11. Stories at or above `emberBar` are badged **don't miss** — an absolute threshold, not a top-N, so on a dull day it correctly returns nothing.
 
+### Two modes
+
+Ember is a set of unfitted guesses about what makes a story worth reading. Trusting it blindly is how you stop noticing that it is wrong. So the threshold control has two modes, and the second one exists to catch the first one failing.
+
+| Mode | Threshold | What it is for |
+|---|---|---|
+| **Ember** | Minimum Ember | The daily driver. A short, ranked list. |
+| **Comments** | Minimum comments | The audit. The raw HN signal, unopinionated. |
+
+The workflow is a set difference. Read in Ember mode, then flip to Comments mode for a quick second pass. Anything Ember would have excluded is tagged **Ember hid this**, so you are not mentally diffing two lists — you are looking at exactly the stories the score decided against, and judging whether it was right.
+
+Two outcomes, both useful: you find something good in the hidden set, which means the score is mistuned and [the constants](#tuning) need work; or you do not, which is evidence Ember is earning its place.
+
+Where the disagreement actually lives, measured live over 7 days:
+
+| Comments | Shown | Tagged *Ember hid this* |
+|---|---|---|
+| 100+ | 182 | 125 |
+| 200+ | 90 | 37 |
+| 500+ | 19 | 1 |
+
+At 500+ Ember agrees with raw comment count almost perfectly, so there is nothing to learn. At 100+ the hidden set is too big to skim. **200+ over 7 days** is the useful audit: a few dozen judgement calls, which is a reviewable number. Regenerate this table for the current window with `node test-thresholds.mjs`.
+
 ### Choosing a threshold
 
 The **Minimum Ember** control is the volume knob: pick the floor that matches the time you have. Measured against a live 24-hour window:
@@ -60,19 +85,25 @@ The **Minimum Ember** control is the volume knob: pick the floor that matches th
 
 ### Tuning
 
-The five constants are experiments, not settled truth. Override any of them with a URL parameter; values persist locally and are written back to the URL so a tuned setup stays bookmarkable.
+Open **How Ember works** in the header for the formula, the terms, and a slider for each parameter. Dragging previews the value; releasing rescores the stories already loaded, saves the setting and writes it to the URL, so a tuned setup stays bookmarkable. **Reset to defaults** restores all five.
 
-| Parameter | Symbol | Default | Effect |
-|---|---|---|---|
-| `emberHeat` | $h$ | `1.2` | Ratio at which comments start counting against a story. Lower is stricter about flamewars. |
-| `emberWeight` | $w$ | `1.5` | How hard the heat penalty bites. `0` disables it. |
-| `emberMaturity` | $m$ | `6` | Accumulation-curve time constant in hours. Higher projects young stories further forward, favouring fresh ones more aggressively. |
-| `emberEndorsement` | $E$ | `150` | Points at which half the heat penalty is forgiven. Higher keeps punishing divisive stories that many people upvoted. |
-| `emberBar` | — | `9.5` | Score needed for the **don't miss** badge. |
+Ranges spanning orders of magnitude use a logarithmic track. On a linear one the `emberEndorsement` default would sit 1.5% along it, leaving the useful range a few pixels wide.
+
+Every parameter is also settable directly in the URL:
+
+| Parameter | Symbol | Default | Range | Effect |
+|---|---|---|---|---|
+| `emberHeat` | $h$ | `1.2` | 0.05–20 | Ratio at which comments start counting against a story. Lower is stricter about flamewars. |
+| `emberWeight` | $w$ | `1.5` | 0–6 | How hard the heat penalty bites. `0` disables it. |
+| `emberMaturity` | $m$ | `6` | 0.5–72 | Accumulation-curve time constant in hours. Higher projects young stories further forward, favouring fresh ones more aggressively. |
+| `emberEndorsement` | $E$ | `150` | 1–10000 | Points at which half the heat penalty is forgiven. Higher keeps punishing divisive stories that many people upvoted. |
+| `emberBar` | — | `9.5` | 0–20 | Score needed for the **don't miss** badge. Does not affect ranking. |
 
 ```
-index.html?sort=ember&timeframe=86400&minEmber=9&emberHeat=0.9
+index.html?mode=ember&timeframe=86400&minEmber=9&emberHeat=0.9
 ```
+
+The most direct way to judge a change: switch to Comments mode and tune from there. The **Ember hid this** marks update as you go, so you can see exactly which stories a setting excludes.
 
 ### A note on the API prefilter
 
@@ -82,10 +113,13 @@ A high floor would otherwise hide fresh stories that the maturity projection alr
 
 Stories that are both old and below their window's floor are still not retrieved; the cap makes some floor unavoidable. If a window ever does exceed 1,000 matches, the status bar says `first 1,000 matches` rather than failing silently.
 
+Comments mode adds a `num_comments>=` query on top, which is not bounded by points and so is a separate cap risk. `test-thresholds.mjs` checks every mode/window/threshold combination against the cap; the worst case today is 30 days at 100+ comments, at 819 hits.
+
 ### Tests
 
 ```bash
 node test-ember.mjs       # deterministic: scoring behaves as designed
+node test-sliders.mjs     # deterministic: parameter sliders map exactly and clamp
 node test-thresholds.mjs  # live: windows stay under the API cap, floors stay useful
 ```
 
